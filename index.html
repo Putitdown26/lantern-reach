@@ -4331,7 +4331,7 @@ const CH_ANG = [[Math.PI / 2, 0, 1], [0.4636, 1, 1], [0, 2, 1], [-0.4636, 3, 1],
 function drawCharSprite(ctx, x, y, s, L, o, vi){
   const C = CHAR_ATLAS, fdx = o.fdx == null ? 1 : o.fdx, fdy = o.fdy == null ? 1 : o.fdy, a = Math.atan2(fdy, fdx);
   let best = CH_ANG[0], bd = 9; for (const c of CH_ANG){ let d = Math.abs(a - c[0]); if (d > Math.PI) d = 2 * Math.PI - d; if (d < bd){ bd = d; best = c; } }
-  const t = o.t || 0, fr = o.seated ? 7 : o.walk ? 1 + (Math.floor((t * (o.run ? 1.95 : 1.2) + (x * 0.013)) * 6) % 6 + 6) % 6 : 0;
+  const t = o.t || 0, fr = o.seated ? 7 : o.walk ? 1 + (Math.floor((t * (o.run ? 2.4 : 1.55) + (x * 0.013)) * 6) % 6 + 6) % 6 : 0;   // same step as you
   const col = best[1] * 8 + fr, hpx = s * 0.0088 * (L.tall || 1) * 112 * 0.98, k = hpx / 76, w = C.fw * k, h = C.fh * k;
   const bt = bodyType(L, vi), BP = BODY_PROF[bt];
   ctx.save(); if (o.alpha != null) ctx.globalAlpha *= o.alpha;
@@ -9035,7 +9035,7 @@ function stationUpdate(dt){
   // walkers
   for (const w of ST.walkers){
     if (w.path.length){
-      const [tx,ty] = w.path[0]; const sp = (w.kind==='drone'?1.6:2.1)*dt, dx=tx-w.fx, dy=ty-w.fy, d=Math.hypot(dx,dy);
+      const [tx,ty] = w.path[0]; const sp = (w.kind==='drone'?1.6:1.85)*dt,   /* a pace that matches their stride, so feet don't slide */ dx=tx-w.fx, dy=ty-w.fy, d=Math.hypot(dx,dy);
       if (d<=sp){ w.fx=tx; w.fy=ty; w.path.shift(); if (!w.path.length){ w.wait = w.kind==='drone'?rnd(0.5,2):rnd(2,7); if (w.errand) errandArrive(w); } }
       else { w.fx+=dx/d*sp; w.fy+=dy/d*sp; w.dir = dx>0?1:dx<0?-1:w.dir; w.mdx=dx/d; w.mdy=dy/d; }
     } else if ((w.wait-=dt) <= 0){
@@ -9444,7 +9444,7 @@ function rotProxy(R){
     const [w, h] = rotDims(R), map = [], floorOf = [];
     for (let y = 0; y < h; y++){ map.push([]); floorOf.push([]); for (let x = 0; x < w; x++){ const [ax, ay] = unrotP(x, y, R); map[y].push(real.map[ay][ax]); floorOf[y].push(real.floorOf[ay][ax]); } }
     const P = Object.create(real); P.map = map; P.floorOf = floorOf; P.w = w; P.h = h; P._isRot = R;
-    for (const k of ['_rooms', '_doorCount', '_sn', '_wornF', '_rails', '_refl', '_lsrc', '_drips', '_sparks', '_motes', 'mmT', 'mmC']) P[k] = undefined;
+    for (const k of ['_rooms', '_holo', '_holoSpots', '_roomNames', '_doorCount', '_sn', '_wornF', '_rails', '_refl', '_lsrc', '_drips', '_sparks', '_motes', 'mmT', 'mmC']) P[k] = undefined;
     // doors: found again on the turned map, each tied back to the real door it came from (for how far open it is)
     const own = (d0, x, y) => d0.ax === 'x' ? (y === d0.y && x >= d0.x0 && x <= d0.x1) : (x === d0.x && y >= d0.y0 && y <= d0.y1);
     P.doors = findDoors(map, w, h).map(d => { const [ax, ay] = unrotP(d.ax === 'x' ? d.x0 : d.x, d.ax === 'x' ? d.y : d.y0, R), o = real.doors.find(d0 => own(d0, ax, ay));
@@ -9478,6 +9478,30 @@ function drawFacetGrade(ctx, W, H, top){   // the arrival pictures' grade: warm 
   ctx.fillStyle = ctx.createPattern(_facetGrain, 'repeat'); ctx.save(); ctx.translate((Math.random() * 256) | 0, (Math.random() * 256) | 0); ctx.fillRect(-256, top - 256, W + 512, H + 512); ctx.restore(); ctx.restore();
 }
 let _facetGrain = null;
+// shops, bars and markets with no projector of their own get a small hologram floating over the counter
+function holoSpots(){
+  if (ST._holoSpots) return ST._holoSpots; const out = []; if (typeof roomGrid !== 'function') return (ST._holoSpots = out);
+  const R = roomGrid(), withH = new Set(); for (let y = 0; y < ST.h; y++) for (let x = 0; x < ST.w; x++) if (ST.map[y][x] === 'h') for (const [dx, dy] of [[0, 0], [0, 1], [1, 0], [0, -1], [-1, 0]]){ const id = R.id[(y + dy) * R.W + x + dx]; if (id >= 0) withH.add(id); }
+  const done = new Set(), add = (x, y, kind, lift) => { const id = R.id[y * R.W + x]; const rid = id >= 0 ? id : (() => { for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]){ const j = R.id[(y + dy) * R.W + x + dx]; if (j >= 0) return j; } return -1; })();
+    if (rid < 0 || withH.has(rid) || done.has(rid)) return; done.add(rid); out.push({x, y, kind, lift}); };
+  for (const n of ST.npcs){ const kind = {K: 'credit', m: 'credit', O: 'gun', F: 'crate', W: 'gear', J: 'contract', S: 'ship'}[n.shop] || (n.bar ? 'drink' : null); if (!kind) continue;
+    let spot = null; for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]){ const c = (ST.map[n.y + dy] || [])[n.x + dx]; if (c && 'QE=M'.includes(c)){ spot = [n.x + dx, n.y + dy]; break; } }
+    if (spot) add(spot[0], spot[1], kind, 0.95); }
+  for (let y = 0; y < ST.h; y++) for (let x = 0; x < ST.w; x++){ const c = ST.map[y][x]; if (c === 'G') add(x, y, 'dice', 0.75); }
+  return (ST._holoSpots = out);
+}
+// what a room's hologram should show, from what is in the room
+function holoKind(x, y){
+  if (typeof roomGrid !== 'function') return null; const R = roomGrid();
+  if (!ST._holo){ const has = {}, T = (typeof TRADERS !== 'undefined' && TRADERS[ST.sys]) || {}, put = (id, k) => { if (id >= 0) (has[id] = has[id] || {})[k] = 1; };
+    for (let yy = 0; yy < ST.h; yy++) for (let xx = 0; xx < ST.w; xx++){ const c = ST.map[yy][xx], id = R.id[yy * R.W + xx];
+      if (c === 'S' || c === 'D' || c === 'H') put(id, 'ship'); else if (c === 'J') put(id, 'contract'); else if (c === 'K' || c === 'M') put(id, 'credit'); else if (c === 'O') put(id, 'gun'); else if (c === 'F') put(id, 'crate'); else if (c === 'G') put(id, 'dice'); else if (c === '=') put(id, 'drink'); }
+    for (const n of ST.npcs){ const id = R.id[n.y * R.W + n.x]; const k = {S: 'ship', J: 'contract', K: 'credit', m: 'credit', O: 'gun', F: 'crate', W: 'gear'}[n.shop]; if (k) put(id, k); if (n.bar) put(id, 'drink'); }
+    ST._holo = {}; for (const id in has){ const h = has[id]; ST._holo[id] = h.ship ? 'ship' : h.contract ? 'contract' : h.gun ? 'gun' : h.gear ? 'gear' : h.crate ? 'crate' : h.credit ? 'credit' : h.dice ? 'dice' : h.drink ? 'drink' : null; } }
+  // the projector sits by a wall or in a doorway: look at its own tile and its neighbours
+  for (const [dx, dy] of [[0, 0], [0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, -1], [1, -1], [-1, 1]]){ const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= ST.w || yy >= ST.h) continue; const id = R.id[yy * R.W + xx]; if (id >= 0 && ST._holo[id]) return ST._holo[id]; }
+  return null;
+}
 function drawStationIso(ctx, W, H, top){
   if (facetOn() && wornOn() && ST.sys !== 'sable'){ drawStationIso1(ctx, W, H, top); drawFacetGrade(ctx, W, H, top); if (typeof drawCine === 'function') drawCine(ctx, W, H, top); if (ST.iso && !ST.mmBig) drawMinimap(ctx, W, H, top); return; }
   drawStationIso1(ctx, W, H, top);
@@ -9603,6 +9627,7 @@ function drawStationIso0(ctx, W, H, top){
   for (const n of ST.npcs){ const nx = n.fx != null ? n.fx : n.x, ny = n.fy != null ? n.fy : n.y; if (!vis(Math.round(nx), Math.round(ny))){ n._s = null; continue; }
     const bp = (n.bar || (n.shop && WORN)) && !n.trip ? barPos(n) : null; items.push({k: bp && bp.front ? n.x + n.y + 0.99 : nx + ny + 1.02, npc: n, bp}); }
   for (const w of ST.walkers){ if (vis(Math.round(w.fx), Math.round(w.fy))) items.push({k: w.fx + w.fy + 1.02, wk: w}); else w._s = null; }
+  if (T3) for (const hs of holoSpots()) if (vis(hs.x, hs.y)) items.push({k: hs.x + hs.y + 1.6, holo: hs});
   { const lp = ST.pose && ST.pose.k === 'lie'; items.push({k: lp ? ST.pose.x + ST.pose.y + 1.03 : ST.fx + ST.fy + 1.03, me: 1}); }
   items.sort((a, b) => a.k - b.k || (a.x || 0) - (b.x || 0));
   const pk = ST.fx + ST.fy + 1, pd = ST.fx - ST.fy;
@@ -9965,7 +9990,7 @@ function drawStationIso0(ctx, W, H, top){
   const prop = (id, sx, sy, a) => { let A = PROP_ATLAS, img = _prImg, i = A.ids.indexOf(id); if (i < 0 && _obImg){ A = OBJ_ATLAS; img = _obImg; i = A.ids.indexOf(id); } if (i < 0) return false; const k = tw / A.cw, cs = A.cols || A.ids.length, c0 = (i % cs) * A.cw, r0 = Math.floor(i / cs) * A.ch;
     if (a != null && a < 1){ ctx.save(); ctx.globalAlpha *= a; } ctx.drawImage(img, c0, r0, A.cw, A.ch, sx - A.ax * k, sy - A.ay * k, A.cw * k, A.ch * k); if (a != null && a < 1) ctx.restore(); return true; };
   // a worn hologram: a cone of light from the projector, a turning wireframe (a world, a ship or the station's sigil) built from scan lines, flickering
-  const drawHolo = (x, y, cx, cy) => {
+  const drawHolo = (x, y, cx, cy, force) => {
     const [rx, ry] = toReal(x, y), kind = (rx * 3 + ry) % 3, hc = ST.sys === 'vesk' ? [255, 90, 120] : ST.sys === 'tolle' || ST.sys === 'gallow' || ST.sys === 'cinder' ? [255, 190, 110] : [140, 220, 255];
     const fl = (Math.random() < 0.04 ? 0.35 : 1) * (0.85 + 0.15 * Math.sin(T * 13 + x)), gl = Math.random() < 0.03 ? (Math.random() - 0.5) * tw * 0.08 : 0;
     const R = tw * 0.24, oy = cy - tw * 0.62 + Math.sin(T * 1.7 + x) * 2, ox = cx + gl, top = cy - tw * 0.2;
@@ -9973,13 +9998,34 @@ function drawStationIso0(ctx, W, H, top){
     const cone = ctx.createLinearGradient(0, top, 0, oy - R); cone.addColorStop(0, rgbs(hc, 0.22 * fl)); cone.addColorStop(1, rgbs(hc, 0));
     ctx.fillStyle = cone; ctx.beginPath(); ctx.moveTo(cx - tw * 0.05, top); ctx.lineTo(ox - R * 1.05, oy); ctx.lineTo(ox + R * 1.05, oy); ctx.lineTo(cx + tw * 0.05, top); ctx.fill();
     ctx.strokeStyle = rgbs(hc, 0.55 * fl); ctx.lineWidth = 1;
-    const rot = T * 0.7 + x;
-    if (kind === 0){   // a world turning
-      for (let i = -2; i <= 2; i++){ const k = i / 3, w = R * Math.sqrt(1 - k * k); ctx.beginPath(); ctx.ellipse(ox, oy + k * R, w, w * 0.22, 0, 0, 7); ctx.stroke(); }
-      for (let i = 0; i < 4; i++){ const a = rot + i * Math.PI / 4, w = Math.abs(Math.cos(a)) * R; ctx.beginPath(); ctx.ellipse(ox, oy, w, R, 0, 0, 7); ctx.stroke(); }
-    } else if (kind === 1){   // a ship, slowly turning, as a wireframe
+    const rot = T * 0.7 + x, what = force || holoKind(x, y), sq = Math.cos(rot), ln = (pts, close) => { ctx.beginPath(); pts.forEach(([u, v], i) => { const X = ox + u * R * sq, Y = oy + v * R; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); if (close) ctx.closePath(); ctx.stroke(); };
+    const cube = (pips) => { const P3 = [], c = Math.cos(rot), s2 = Math.sin(rot); for (const X of [-1, 1]) for (const Y of [-1, 1]) for (const Z of [-1, 1]) P3.push([X, Y, Z]);
+      const pr = q => [ox + (q[0] * c + q[2] * s2) * R * 0.62, oy - q[1] * R * 0.62 + (-q[0] * s2 + q[2] * c) * R * 0.22]; for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++){ const d = P3[i].reduce((t, v, k) => t + (v !== P3[j][k] ? 1 : 0), 0); if (d === 1){ const A = pr(P3[i]), B = pr(P3[j]); ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke(); } }
+      if (pips){ ctx.fillStyle = rgbs(hc, 0.7 * fl); for (const q of [[0, 1, 0], [-0.5, 1, -0.5], [0.5, 1, 0.5], [1, 0.4, -0.4], [1, -0.4, 0.4]]){ const A = pr(q); ctx.fillRect(A[0] - 1, A[1] - 1, 2.2, 2.2); } }
+      else { const A = pr([-1, 1, 1]), B = pr([1, -1, 1]), C = pr([1, 1, 1]), D = pr([-1, -1, 1]); ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.moveTo(C[0], C[1]); ctx.lineTo(D[0], D[1]); ctx.stroke(); } };
+    if (what === 'contract'){   // a contract: a page with lines of text, a seal and a signature
+      ln([[-0.55, -0.85], [0.4, -0.85], [0.6, -0.65], [0.6, 0.85], [-0.55, 0.85]], true); for (let i = 0; i < 5; i++) ln([[-0.4, -0.55 + i * 0.22], [i === 4 ? 0.05 : 0.42, -0.55 + i * 0.22]]);
+      ctx.beginPath(); ctx.ellipse(ox + 0.32 * R * sq, oy + 0.6 * R, Math.abs(0.14 * R * sq) + 0.5, 0.14 * R, 0, 0, 7); ctx.stroke(); ln([[-0.42, 0.62], [-0.3, 0.52], [-0.18, 0.66], [-0.05, 0.54]]); }
+    else if (what === 'credit'){   // a turning credit coin with the money mark
+      ctx.beginPath(); ctx.ellipse(ox, oy, Math.abs(R * 0.8 * sq) + 0.5, R * 0.8, 0, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.ellipse(ox, oy, Math.abs(R * 0.62 * sq) + 0.5, R * 0.62, 0, 0, 7); ctx.stroke();
+      ctx.beginPath(); for (let i = 0; i <= 12; i++){ const a2 = Math.PI * 0.25 + i / 12 * Math.PI * 1.5, X = ox + Math.cos(a2) * R * 0.36 * sq, Y = oy + Math.sin(a2) * R * 0.38; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); } ctx.stroke(); ln([[-0.05, -0.5], [-0.05, 0.5]]); ln([[0.1, -0.5], [0.1, 0.5]]); }
+    else if (what === 'crate') cube(false);
+    else if (what === 'dice') cube(true);
+    else if (what === 'gun'){   // a blaster in profile
+      ln([[-0.85, -0.2], [0.55, -0.2], [0.85, -0.12], [0.85, 0.02], [0.2, 0.02], [0.1, 0.12], [-0.25, 0.12], [-0.35, 0.65], [-0.62, 0.65], [-0.55, 0.12], [-0.85, 0.06]], true); ln([[-0.2, 0.12], [-0.12, 0.3], [0.02, 0.3], [0.05, 0.12]]); ln([[-0.6, -0.32], [0.3, -0.32]]); }
+    else if (what === 'gear'){   // a gear for the mechanic
+      ctx.beginPath(); for (let i = 0; i <= 48; i++){ const a2 = i / 48 * Math.PI * 2 + rot * 0.5, r2 = (Math.floor(i / 3) % 2 ? 0.62 : 0.8) * R; const X = ox + Math.cos(a2) * r2, Y = oy + Math.sin(a2) * r2 * 0.9; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); } ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(ox, oy, R * 0.24, R * 0.22, 0, 0, 7); ctx.stroke(); }
+    else if (what === 'drink'){   // a glass and a bottle
+      ln([[-0.7, -0.5], [-0.15, -0.5], [-0.25, -0.05], [-0.42, 0.05], [-0.42, 0.6], [-0.22, 0.7], [-0.68, 0.7], [-0.48, 0.6], [-0.48, 0.05], [-0.62, -0.05]], true); ln([[-0.65, -0.32], [-0.2, -0.32]]);
+      ln([[0.25, 0.75], [0.25, -0.15], [0.38, -0.35], [0.38, -0.8], [0.52, -0.8], [0.52, -0.35], [0.65, -0.15], [0.65, 0.75]], true); ln([[0.25, 0.1], [0.65, 0.1]]); ln([[0.25, 0.45], [0.65, 0.45]]); }
+    else if (what === 'ship' || kind === 1){   // a ship, slowly turning, as a wireframe
       const pts = [[0, 0, 1.2], [-0.6, 0, -0.8], [0.6, 0, -0.8], [0, 0.35, -0.6], [0, -0.2, -0.9]], pr = p => [ox + (p[0] * Math.cos(rot) + p[2] * Math.sin(rot)) * R, oy - p[1] * R + (-p[0] * Math.sin(rot) + p[2] * Math.cos(rot)) * R * 0.3];
       for (const [a, b] of [[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3], [1, 4], [2, 4], [0, 4]]){ const p = pr(pts[a]), q = pr(pts[b]); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+    }
+    else if (kind === 0){   // a world turning
+      for (let i = -2; i <= 2; i++){ const k = i / 3, w = R * Math.sqrt(1 - k * k); ctx.beginPath(); ctx.ellipse(ox, oy + k * R, w, w * 0.22, 0, 0, 7); ctx.stroke(); }
+      for (let i = 0; i < 4; i++){ const a = rot + i * Math.PI / 4, w = Math.abs(Math.cos(a)) * R; ctx.beginPath(); ctx.ellipse(ox, oy, w, R, 0, 0, 7); ctx.stroke(); }
     } else {   // the station's ring and spokes
       ctx.beginPath(); ctx.ellipse(ox, oy, R, R * 0.38, 0, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.ellipse(ox, oy, R * 0.35, R * 0.13, 0, 0, 7); ctx.stroke();
       for (let i = 0; i < 4; i++){ const a = rot + i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(ox + Math.cos(a) * R * 0.35, oy + Math.sin(a) * R * 0.13); ctx.lineTo(ox + Math.cos(a) * R, oy + Math.sin(a) * R * 0.38); ctx.stroke(); }
@@ -10018,6 +10064,7 @@ function drawStationIso0(ctx, W, H, top){
       continue;
     }
     if (it.door){ drawDoor(it.door); continue; }
+    if (it.holo){ const [hx, hy] = P2(it.holo.x + 0.5, it.holo.y + 0.5, it.holo.lift * wallH); drawHolo(it.holo.x, it.holo.y, hx, hy, it.holo.kind); continue; }
     if (it.barstool){ const [sx, sy] = P2(it.barstool[0] + 0.5, it.barstool[1] + 0.35, 0); barStool(sx, sy); continue; }
     if (it.npc){
       const n = it.npc, bp = it.bp; let [sx, sy] = bp ? P2(bp.x + 0.5, bp.y + 0.5, 0) : P2((n.fx != null ? n.fx : n.x) + 0.5, (n.fy != null ? n.fy : n.y) + 0.5, 0);
@@ -12654,7 +12701,7 @@ function keeperTick(dt){
     const tr = n.trip; if (!tr) continue;
     if (tr.wait > 0){ tr.wait -= dt; if (tr.wait <= 0){ tr.phase = 'back'; tr.path = bfs(n.x, n.y, (x, y) => x === n.hx && y === n.hy, true) || []; } continue; }
     if (tr.path.length){
-      const [tx, ty] = tr.path[0], sp = 2.6 * dt, dx = tx - n.fx, dy = ty - n.fy, d = Math.hypot(dx, dy);
+      const [tx, ty] = tr.path[0], sp = 1.95 * dt, dx = tx - n.fx, dy = ty - n.fy, d = Math.hypot(dx, dy);
       if (d <= sp){ n.fx = tx; n.fy = ty; n.x = tx; n.y = ty; tr.path.shift(); }
       else { n.fx += dx / d * sp; n.fy += dy / d * sp; n.mdx = dx / d; n.mdy = dy / d; }
       continue;
