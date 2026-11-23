@@ -6586,8 +6586,10 @@ function collectCan(e){
 
 // ---------- player actions ----------
 function cycleTarget(){
-  const list = S.ents.filter(e=>(e.kind==='ship'||e.kind==='can'||(e.kind==='site'&&!(e.site&&e.site.done)&&!(inStorm()&&vdist(e.pos,P.pos)>600))||(e.kind==='rock'&&vdist(e.pos,P.pos)<1500))&&!e.dead&&vdist(e.pos,P.pos)<(e.kind==='site'?9000:6000));
-  list.sort((a,b)=>{ const pa=a.side==='hostile'?0:a.kind==='ship'?1:a.kind==='site'?2:3, pb=b.side==='hostile'?0:b.kind==='ship'?1:b.kind==='site'?2:3; return pa-pb || vdist(a.pos,P.pos)-vdist(b.pos,P.pos); });
+  // order: anything shooting at you, then the station and the Lantern (always, however far), then contract ships, other ships, sites, cargo and rocks
+  const list = S.ents.filter(e=>!e.dead&&(e.kind==='station'||e.kind==='gate'||((e.kind==='ship'||e.kind==='can'||(e.kind==='site'&&!(e.site&&e.site.done)&&!(inStorm()&&vdist(e.pos,P.pos)>600))||(e.kind==='rock'&&vdist(e.pos,P.pos)<1500))&&vdist(e.pos,P.pos)<(e.kind==='site'?9000:6000))));
+  const rank = e => e.side==='hostile'&&e.kind==='ship' ? 0 : e.kind==='station' ? 1 : e.kind==='gate' ? 2 : jobOf(e) ? 3 : e.kind==='ship' ? 4 : e.kind==='site' ? 5 : e.kind==='can' ? 6 : 7;
+  list.sort((a,b)=> rank(a)-rank(b) || vdist(a.pos,P.pos)-vdist(b.pos,P.pos));
   if (!list.length){ S.target=null; return msg('Nothing on scanner.','#aaa'); }
   const i = list.indexOf(S.target); S.target = list[(i+1)%list.length]; sfx('click');
 }
