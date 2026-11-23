@@ -5351,7 +5351,8 @@ function abandonMission(m){
 }
 function completeMission(m){
   G.missions = G.missions.filter(x=>x!==m); delete G.mcargo[m.id];
-  addCredits(m.reward, m.title); if (m.fac) rep(m.fac, m.rep||3);
+  if (m.reward) addCredits(m.reward, m.title); else toast('Done: '+m.title,'good'); if (m.fac) rep(m.fac, m.rep||3);
+  if (m.sq && typeof sqDone === 'function') sqDone(m);
   if (m.favour){ G.flags.thorneOwed = 0; toast('Favour done. Thorne will hide you again if you need it.','good'); }
   addXP(15 + Math.round(m.reward/120)); G.stats.missions++;
   journal('Completed: '+m.title); sfx('good');
@@ -8374,107 +8375,107 @@ function dashButtons(b, g, L){
 const STATION_MAPS = {
 "haldane": [
 "##################B#########B########################",
-"#,,,,,,b,,,,,#.Y......kI.Y.....CC#cc::VV::::v#v....Q#",
+"#,,,,,,b,,,,,#.Y.?P?L.kI.Y.L+L.CC#cc+:VV:!+:v#v....Q#",
 "#,==========,#........k#.......C.#c:::VV:::::I.tt..Q#",
-"#,,,,,,,8,,,,#....5....#....4....I::::::::::z#.0....#",
-"#,,,,,,,,,,,,#P.......?#^........#::::::::::z#......#",
-"#,,T,,,G,,T,,#.........#.......y.#::::::::::z#.tt...#",
-"#,,0,,,,,,0,P#P.L....P?#P......yy#d:+::::::::#.....U#",
-"######,,,#I#######..#######...########:::######....##",
-"######,,,####s,%,#..#######...########:::######U..P##",
-"#P.U.......U#%,,,#.......+.......!..U.....+..U.....!#",
-"#...........#mM,,,..................................#",
-"#...........#%,,,,....h.............................#",
-"#+..........#c,%,#..................................#",
-"#..........+######.................................P#",
-"#...................................................#",
-"#+....^L...L..........!.U.P....+.....U....P...P.....#",
-"##::::############,,########::########Ioo######I..###",
+"#,,,,,,,8,,,,#!...5...L#!...4....Id::::::cc:z#.0....#",
+"#!,,,,,,,,,,?#?.......P#^........#c::::::+::z#.....U#",
+"#,,T,,,G,,T,,#.........#L......y.#^:::::::::z#.tt...#",
+"#P,0,,,,,,0,P#P!L....LP#P^.....yy#d:::::::+::#U.....#",
+"######,,,#I#######..#######...########:::######U...##",
+"######,,,####s,%,#..#######...########:::######....##",
+"#P.U^.....LU#%,,,#...+...........!..U.......UU......#",
+"#+.........!#mM,,,.................................P#",
+"#c..^+.^+..L#%,,,,....h.............................#",
+"#+.........!#c,%,#.................................P#",
+"#^..^+.^+..+######.................................P#",
+"#^.................................................!#",
+"#.....+++.+L..........+.!.+.........P........P......#",
+"##:::c############,,########::########Ioo######I..###",
 "#c::::c#######RRRR,,RRR#AAAA::AA:#h###ooo###kkk....k#",
 "#E:::::#HHHHH#RQ,,,,,,,#AQ:::::::##Qoooooo##kQ......#",
-"#EW::::#HHHHH#KQ,,,,,,,#OQ:::::::#SQooooho##JQ...h..#",
+"#EW:::L#HHHHH#KQ,,,,,,,#OQ::c+:::#SQoUUoho##JQ...h..#",
 "#E::::::::X::#,,,,,,,,,I:::::::::#oooooooo##........#",
-"#c:::^::::D::#Z,,,,,,,P#Z::::::P:#ZooooooP##Y...T..P#",
+"#c:!:^c:::D::#Z,,,,,,,P#Z::::::P+#ZooooooP##Y...T..P#",
 "#####################################################"
 ],
 "meridian": [
 "##############B###############ww#wwrBww#ww################",
-"#####s,%%,#.Y..?P.k#.Y.....A##PrrUrrhrrUrP################",
-"#####%,,,,#.......k#....h..AI#rrrrrrrrrrrr################",
-"#####%,,,,#........#........##rrrrrrrrrrrr################",
-"#####mM,,,,...5...L#P......L##rpppprrppppr################",
-"#####%,,,,,........#L...6..?##rpppprrppppr################",
-"#####%,,,,#P.......#.......?##rrrrrrrrrrrr################",
-"#####c,%%,#......?P#?P......##PrrrrrrrrrrP################",
-"#############I..########..########PrrP#I############I#####",
-"#hEEoooooo#UP....P.P..P.....P....P.....PP.#,,,,,,b,,,,,,,#",
+"#####s,%%,#.Y.!?P?k#.Y....?A##PPrrUrhrPrrP################",
+"#####%,,,,#.......k#....h..AI#PrrrrrrrrrrU################",
+"#####%,,,,#.......!#L.......##Urrrrrrrrrrr################",
+"#####mM,,,,...5...L#!......P##rpppprrppppr################",
+"#####%,,,,,.......L#L...6..P##rpppprrppppr################",
+"#####%,,,,#P.......#P......?##rrrrrrrrrrrP################",
+"#####c,%%,#PL....L?#L?L....!##Prrrrrrrrrrr################",
+"#############I..########..########PrrU#I############I#####",
+"#hEEoooooo#........PP.P.....PU............#,,,,,,b,,,,,,!#",
 "#EQooooooo#...............................,,===========,,#",
-"#SQoooohooo..........U.........U..........,,,,,,,,9,,,,,,#",
-"#oooooooooo...............................,,,,T,,G,,,T,,,#",
+"#SQo^+ohooo..........U.........U..........,,,,,,,,9,,,,,?#",
+"#oooooooooo...............................,,,,T,,G,,,T,,+#",
 "#ZooooooPo#.............~~~~~~............#,,,0,,,,,,0,,P#",
-"#ooooooooo#.............~~~~~~...........P#?,,,,,,,,,,,,,#",
-"###########P............~~h~~~............################",
-"#kkk......#.............~~~~~~............IoooUooooooUooPw",
+"#ooooooooo#.............~~~~~~...........P#?P,,,P,?!,,,,,#",
+"###########P............~~h~~~...........P################",
+"#kkkL?....#.............~~~~~~............IoooUooooooUooPw",
 "#kQ.......#...............................ooooooo0ooooooow",
 "#JQ....h.............U.........U..........ooooottttttoooo#",
 "#.........................................ooooooo0oo0oooow",
 "#Y....T.P.#........P........P.............#oooUooooooUooPw",
-"#.........#P.U.......U.U......U....P..P..U#oooooooooooooow",
+"#..L!....P#.UU......PUP.............P...P.#oooooooooooooow",
 "###############,,########::###I#::########################",
 "###########RRR,,,,R#AAAA:::A##::::::######################",
 "###########RQ,,,,,,#AQ::::::##E:::::#HHHHH################",
-"###########KQ,,,,,,#OQ::::::##EW::::#HHHHH################",
-"###########,,,,,,,,I::::::::##E::::::::X::################",
-"###########Z,,,,,,P#Z::::::P##cc::c::::D::################",
+"###########KQ,c+,,,#OQ:c+:::##EW::::#HHHHH################",
+"###########,,,,,,,cI:::::::+##E::::::::X::################",
+"###########Z,,+,,,P#Z::::::P##cc::c::::D::################",
 "##########################################################"
 ],
 "ostra": [
 "#############################",
-"#kkk..kkkk#P..h...P#kooooookw",
-"#.........#........#o0t0tooow",
-"#.........#........#ooooooooo",
+"#kkk??kkkk#P..h.!.P#kooooookw",
+"#?.......!#.......P#o0t0tooow",
+"#L..?T?...#........#ooooooooo",
 "#..................ooooooooP#",
 "#.T0...T.....0T.0..oo0t0tooow",
-"#.........#........#oooooooow",
-"##########I........##########",
-"#RRR,,,RRR#P......U#,,,b,,,,#",
-"#RQ,,,,,,,#U.......I,=====,,#",
-"#RQ,,,,,,,#........#,,,,=,,,#",
-"#KQ,,,,,,,,........,,,,,8,,,#",
-"#,,,,,,,,,,..0T.0..,,,T,T,,,#",
-"#Z,,,,,,,P#........#,,0,,,,P#",
+"#....P....#........#oooooooow",
+"##########I.......P##########",
+"#RRR,,,RRR#........#,,,b,,,!#",
+"#RQ,,,,,,,#........I,=====,,#",
+"#RQ,,c+,,,#........#,,,,=,,+#",
+"#KQ,,,,,,,,........,,,,,8,,P#",
+"#,,,,,,,,,,..0T.0..,,,T,T,,?#",
+"#Z,,,,+,cP#........#,,0,,,?P#",
 "###########........##########",
-"#kkk..kkkk#!......P#rrprprrr#",
-"#.........#.......P#rrprprrr#",
-"#.........#........#rrprprrr#",
+"#kkk?!kkkk#U.......#rrprpPrP#",
+"#L.......P#U......U#rrprprrr#",
+"#?........#........#rrprprrP#",
 "#....5.............rrrrrrrrf#",
-"#.T0...T.....0T.0..rrrprp7rr#",
-"#.........#........#rrrrrrrr#",
+"#.T0...T.....0T.0..rrrprp7rU#",
+"#....?....#........#rrr?rrrr#",
 "##########I........##########",
-"###########.......P##########",
-"#AAA:::AAA#U.......#u.u.u..u#",
-"#AQ:::::::#........I........#",
-"#OQ::::::::................L#",
+"###########.......!##########",
+"#AAAc:+AAA#.......P#u.u.u.Lu#",
+"#AQ:::::::#........I.......+#",
+"#OQ::c+::::............T?..L#",
 "#::::::::::..0T.0...........#",
-"#:::::::::#........#........#",
-"#Z:::::::P#........#t.t.t..t#",
+"#:::::::::#........#.......L#",
+"#Z:!::P::P#.......!#t.t.t?!t#",
 "###########........##########",
-"#hEEoooooo#U......!#kkkYkkkk#",
-"#EQooooooo#!.......#........#",
-"#EQooooooo#........#........#",
+"#hEEoooooo#.......!#kkkYkkkk#",
+"#EQooooooo#.......!#L......P#",
+"#EQo^+oooo#........#..?T?..?#",
 "#SQoooohooo.................#",
 "#oooooooooo..0T.0....T0..T..#",
-"#ZoooooooP#........#........#",
+"#ZoooooooP#........#.......!#",
 "##########I........##########",
-"#kkk......#!.......#yyy:yyyy#",
-"#kk.......#P......U#::::::::#",
-"#kQ.......#........I::::::::#",
-"#JQ....h...........::::::::c#",
+"#kkk.L...?#U......P#yyy:yyyy#",
+"#kk.......#.......P#:::::::+#",
+"#kQ.......#........I:::cc::!#",
+"#JQ....h...........::::+:::c#",
 "#..................:::::::::#",
-"#Y....T..P#........#R::::::R#",
-"####,,#####........##########",
+"#Y....T.PP#........#R::::+cR#",
+"####,,#####.......P##########",
 "##,,,,,,,##U.......##########",
-"##%,,,,,%##!....P.!##########",
+"##%,,,,,%##!.....U.##########",
 "##%,,,,,%####::##############",
 "##,,,M,,,#I::::::############",
 "##s%%m%%c##E:::::#HHHHH######",
@@ -8487,70 +8488,70 @@ const STATION_MAPS = {
 "#################################wwww#wwww###########",
 "###########,,,,,,b,,,,,#gegeegeg#voooooooQ###########",
 "###########,==========,Ieeeeeeee#otttottoQ###########",
-"###########,,,,,,,8,,G,#eeeeee6e#o0oooo0oo###########",
+"###########,,,,,,,8,,G,#eeegge6e#o0oooo0oo###########",
 "###########,,,,,,,,,,,,#eeeeeeee#ooooooooo###########",
 "###########,,T,,,,,,T,,#ee~~~eee#otttottoo###########",
 "###########,,0,,,,,,,,P#Peeeeee#######oooo###########",
-"############I##,,,,#########ee##s,%%,#oo#########I###",
-"#hEEoooooo#.........PP.+.P+....#%,,,,#....#geegegeeg#",
-"#hEooooooo#....................#%,,,,#....#eeeeeeeee#",
-"#EQooooooo#....................#mM,,,,....#eeeeeeeee#",
-"#SQoooohooo.......U...U......U.#%,,,,,....eeeeeeeeee#",
-"#oooooooooo..+#######I##eeee##I#%,,,,#....eeee~~eeee#",
-"#ZooooooPo#...#eeeeeeeeeeeeeeee#c,%%,#+...#Peeeeeeee#",
-"#ooooooooo#+.P#eeeeeeeeeeeeeeee#######...+#eeeeeeeee#",
-"###########...#eegegegegeeeegegegegee#+...###########",
-"#kkk......#...#eeeeeeeeeeeeeeeeeeeeee#...U#u..u.u..u#",
-"#kQ.......#...#eePeeeeeeeeeeeeeeeePee#....#.........#",
-"#JQ....h......eeeeeeeee~~~~~~eeeeeeeee.............c#",
-"#.............eeeeeeeUe~~~~~~eUeeeeeee..............#",
-"#.........#...eeeeeeeee~~~~~~eeeeeeeee....#.........#",
-"#Y....T.P.#...eeeeeeeee~~~~~~eeeeeeeee....#u..u.u..u#",
-"###########U..#eePee.eeeeeeeeeeeeePee#....#####I#####",
-"#ssssssss:#..U#eeeee.eeeeeeeeeeeeeeee#U...#zz::::zzz#",
+"############I##,,,P#########ee##s,%%,#oo#########I###",
+"#hEEoooooo#.........P..+..U....#%,,,,#....#geegegeeg#",
+"#hEooooooo#+...................#%,,,,#...+#eeeeeeeee#",
+"#EQooooooo#....................#mM,,,,....#eeeeggeee#",
+"#SQo^+ohooo........PU+........U#%,,,,,....eeeeeeeeee#",
+"#oooooooooo...#######I##eeee##I#%,,,,#....eeee~~eeee#",
+"#ZooooooPo#..U#eeeeeeeeeeeeeeee#c,%%,#....#Peeeeeeee#",
+"#ooooooooo#...#eeeeeeeeeeeeeeee#######U...#eeeeeeeee#",
+"###########P.U#eegegegegeeeegegegegee#....###########",
+"#kkk!PL...#...#eeeeeeeeeeeeeeeeeeeeee#U..U#u.?u.uLLu#",
+"#kQ.......#...#eePeeeeeeeeeeeeeeeePee#P...#.........#",
+"#JQ....h......eeeeeeeee~~~~~~eeeeeeeee.........T?..c#",
+"#.............eeeeeeeUe~~~~~~eUeeeeeee.............L#",
+"#.........#...eeeeeeeee~~~~~~eeeeeeeee....#........+#",
+"#Y.L?.T.P.#U..eeeeeeeee~~~~~~eeeeeeeee...P#u!.u.uL.u#",
+"###########...#eePee.eeeeeeeeeeeeePee#P...#####I#####",
+"#ssssssss:#...#eeeee.eeeeeeeeeeeeeeee#....#zz:!+:zzz#",
 "#s::::::::#...#eegegegegeeeegegegegee#....#:::::::::#",
-"#c:::::::::...#eeeeeeeeeeeeeeeeeeeeee#+...:::::::::c#",
-"#::::::::::...#####I####eeee#########I....::::::::::#",
-"#:::::::::#...##########eeee##########+...#::::::::+#",
-"#:ss::ss::#....P++...P......U......UU.....#:s::s:s::#",
-"##########I..............................P###########",
-"###########..............................+###########",
-"###########........U..P..PPP....U.P.......###########",
+"#c:::cc::::..P#eeeeeeeeeeeeeeeeeeeeee#....:::::cc::c#",
+"#::::+:::::...#####I####eeee#########I....:::::+::::#",
+"#:::::::::#...##########eeee##########....#::::::::+#",
+"#:ss::ss++#.......+..+........+...P..+....#:s+cs:ss+#",
+"##########I..............................U###########",
+"###########..............................U###########",
+"###########........P.U+..P.+....+.P......+###########",
 "#############::##############,,#######::#############",
 "###########::::::#######RRR,,,,R#AAAA::::A###########",
-"###########E:::::#HHHHH#RQ,,,,,,#AQ:::::::###########",
-"###########EW::::#HHHHH#KQ,,,,,,#OQ:::::::###########",
+"###########E:::::#HHHHH#RQ,,,,,+#AQ:::::::###########",
+"###########EW::::#HHHHH#KQ,c+,,c#OQ::c+:::###########",
 "###########E::::::::X::I,,,,,,,,I:::::::::###########",
-"###########cc::c::::D::#Z,,,,,,P#Z:::::::P###########",
+"###########cc::c::::D::#Z,,,,,,P#Z::+:c::P###########",
 "#####################################################"
 ],
 "brine": [
 "##################################################",
 "##I#######I###~#############~~~~#I##B####~##I#####",
-"##,,,,,b,,,,,#~#a........a.#~~~~#.Y....k#~#zoxoz##",
+"##,,,,,b,,,,,#~#aP......PaP#~~~~#.Y.L.Pk#~#zoxoz##",
 "##,=========,#~#...~~~~....#~~~~#......k#~#ooooo##",
-"##,,,,,,9,,G,#~#a..~~~~..a.#~~~~#...7...#~#xoooz##",
-"##,,T,,,,,T,,#~#...........#~~~~#......?#~#ooooo##",
-"##,,0,,,,,,,P#~#?P?.....P.P#~~~~#P.....P#~#ooooo##",
+"##,,,,,,9,,G,#~#a..~~~~..a.#~~~~#...7..?#~#xoooz##",
+"##,,T,,,,,T,,#~#..........?#~~~~#......?#~#ooooo##",
+"##?,0,,,,,,,P#~#??U....PU.P#~~~~#P!....L#~#ooooo##",
 "######,,,#####~####I..######~~~~####..###~###oo###",
-"#~~~~~qqqqq^qqqqUqqqqqq~~~~~~~~~~~~qqqq^qqq!qqq~~#",
+"#~~~~~qqqqq^qqqq!qqqqqq~~~~~~~~~~~~qqqqq!qqUqqq~~#",
 "#~~~~~qqqqqqqqqqqqqqqqq~~~~~~~~~~~~qqqqqqqqqqqq~~#",
 "#~~~~~qqqqqqqqqqqqqqqqq~~~~~~~~~~~~qqqqqqqqqqqq~~#",
 "#~~~~~qqqqqqqqqqqqqqqqq~~~~~~~~~~~~qqqqqqqqqqqq~~#",
-"#~~~~~qUqqqqqqqqqqqqqqq~~~~~~~~~~~~qqqqq!^!!q^q~~#",
+"#~~~~~^^^qq!qqqqqqqqqqq~~~~~~~~~~~~qqqqUqqUqqqq~~#",
 "####I#########~~~~~qqqq~~~~~~~~~~~~qqq~##I########",
-"##cc::c:::D::#~~~~~qqUqqUqqqqqq~~~~qqq~#u.u.u.u.##",
+"##cc::c:::D::#~~~~~qqqqqUqqqqqq~~~~qqq~#u.u.u.u.##",
 "##E:::::::X::#~~~~~qq#########qqqqqqqqq#........##",
-"##EW:::#HHHHH#~~~~~qq#s%%m%%c#!qqqqqqqq........c##",
+"##EW:::#HHHHH#~~~~~qq#s%%m%%c#qqqqqqqqq....T?..c##",
 "##E::::#HHHHH#~~~~~Uq#,,,M,,,#qqqqqqqqq.........##",
 "##:::::#######~~~~~qq#%,,,,,%#q~~~~~~~~#u.u.u.u.##",
 "####::########~~~~~qq#,,,,,,,#q~~~~~~~~###########",
 "#~~qqq~~~~~~~~~~~~~qq####,,###q~~~~~~~~~~~~~~~~~~#",
-"#~~qqq~~~~~~~~~~~~~qq^qqqqqqq^q~~~~~~~~~~~~~~~~~~#",
+"#~~qqq~~~~~~~~~~~~~qq!qqqqqqqqq~~~~~~~~~~~~~~~~~~#",
 "#~~qqqqqqqqqqqqqqqqqqqq~~~~qqqqqqqqqqqqqqqqqqqq~~#",
 "#~~qqqqqqqqqqqqqqqqqqqq~~~~qqqqqqqqqqqqqqqqqqqq~~#",
 "#~~qqqqqqqqqqqqqqqqqqqq~~~~qqqqqqqqqqqqqqqqqqqq~~#",
-"#~~q^qqqqqqqUqUqqqqqqqq~~~~qqqqqqqqqqqqqqqU!qqq~~#",
+"#~~qqqqqqUqq!^^qqqqUqqq~~~~qqqq!qqqqqqUqqq^qqqq~~#",
 "######,,##~#####::##~~~~~~~~~~#####ooI#~#####..I##",
 "##RRR,,,R#~#AAA:::A#~~~~~~~~~~#hEEoooo#~#kkk....##",
 "##RQ,,,,,#~#AQ:::::#~~~~~~~~~~#EQooooo#~#kQ.....##",
@@ -8563,33 +8564,33 @@ const STATION_MAPS = {
 ],
 "cinder": [
 "#########################################################",
-"##cc::c:::D::##,,,,,,,b,,,,,,,###############.Y.....k####",
+"##cc::c:::D::##,,,,,,,b,,,,,,?###############.Y..?PLk####",
 "##E:::::::X::##,============,,########s,%%,##.......k####",
 "##EW:::#HHHHH##,,,,,,,,2,,,G,,########%,,,,##P.......####",
-"##E::::#HHHHH##,,,T,,,,,,,T,,,########%,,,,#####..##I####",
-"#I:::::########,,,0,,,,,,,,,P,########mM,,,,:!+::::!:+::#",
+"##E::::#HHHHH##!,,T,,,,,,,T,,?########%,,,,#####..##I####",
+"#I:::::########?+,0,,,,,,,,,PP########mM,,,,:!+::::+c+::#",
 "####::####I##########,,,##############%,,,,,:::::::::::c#",
-"##::::::::::::+:::::::::######I#######%,,,,#:::::::::::c#",
-"##^:::::::::::::::::::::##############c,%%,#::+:++::::::#",
-"##::::::::::::::::::::::##u.u..u.u..u#######:######..####",
-"##cc:::::::::::::::+::::##..........c####::::#kkk......##",
-"######,,######::#####:::##...........##I#::::#kQ.......##",
-"##RRR,,,R#AAA:::A:#I#::+##u.u....u..u####!:::#JQ....h..##",
-"##RQ,,,,,#AQ::::::###+::#######..########::::#.........##",
-"##KQ,,,,,#OQ::::::###::::::::::.:::!.^:::::::#Y....T.P.##",
-"#I,,,,,,,#::::::::###::::::::::::::::::::::::############",
+"##::::::::::^:+:::+:::::######I#######%,,,,#:::::::::::c#",
+"##::::::::::::::::::::::##############c,%%,#::s++!::::::#",
+"##+::::::::::::::::::::!##u.u.Lu.u.Lu#######:######..####",
+"##cc::::::::::::::::::::##..........c####::::#kkk......##",
+"######,,######::#####:::##?..........##I#!:::#kQ......P##",
+"##RRR,,,R#AAA:::A:#I#:::##u.u....u..u####::::#JQ....h..##",
+"##RQ,,,,c#AQ::::::###+::#######..########::::#.........##",
+"##KQ,c+,,#OQ:c+::c###::::!::^::.:::..::::::::#Y.?..T.P.##",
+"#I,,,,,,,#:::::::!###::::::::::::::::::::::::############",
 "##Z,,,,,P#Z:::::P:###::::::::::::::::::::::::############",
-"##,,,,,,,#::::::::###::::::::::::::::::::::::############",
+"##,,,,+,,#::P:+:::###:::::::::::::::::+::::::############",
 "#####################:::#######oo#########::#############",
-"##ss::::E#CC...ddd###::+##hEEoooooo##:+::::::+:+#########",
-"##:::::::#E.....E.###:::##EQooooooo#I:::::::::::#########",
-"##RR:::RR#........###:::##SQoooohoo##:::::::::::#########",
-"#####::#####I..######!:^I#ooooooooo##::::::::::^#########",
-"###:::::::::::::::::::::##ZooooooPo##c:::VV:::::#########",
+"##ss::::E#CC...ddd###:::##hEEoooooo##d+c^::::+::#########",
+"##:::::::#E.....E.###:::##EQooooooo#Id:::::::::+#########",
+"##RR:::RR#........###::^##SQo^+ohoo##c:cc:::::::#########",
+"#####::#####I..######:::I#ooooooooo##!:+::::cc::#########",
+"###:::::!::::::::::^::::##ZooooooPo##c:::VV:+::^#########",
 "###:::::::::::::::::::::##ooooooooo##c:::VV:::::#########",
-"##I^::::::::::::::::::::#############cc::VV::::v#########",
+"##I:::::::::::::::::::::#############cc!:VV:+::v#########",
 "###:::::::::::::::::::::#################################",
-"###:::::::::::!:::+^!:::#################################",
+"###::::::::::^:::::+::!:#################################",
 "#######::################################################",
 "##:::::::::::############################################",
 "##c::zzzzz::c############################################",
@@ -8601,70 +8602,70 @@ const STATION_MAPS = {
 "vesk": [
 "#######################################################",
 "################I############I#########################",
-"##############jyrr!r+ryGr#RRR,,,RR#####################",
-"##############rnnnnnnnnrr#RQ,,,,,,#####################",
-"##############?nnnnnnnnrr#RQ,,,,,,#####################",
-"##############rnnnn6nnnrr#KQ,,,,,,#####################",
-"##I###########rnnnnnnnnrr#,,,,,,,,#####################",
-"##,,,,b,,,,,##rTrrrrrrTrr#Z,,,,,,P#####################",
+"##############jyc?!!+!yGr#RRR+,,RR#####################",
+"##############cnnnnnnnnrr#RQ,,,,,,#####################",
+"##############cnnnnnnnnr?#RQ,c+,,,#####################",
+"##############!nnnn6nnnrr#KQ,,,,,,#####################",
+"##I###########rnnnnnnnnr+#,,,,,,,,#####################",
+"##,,,,b,,,,,##rTr?rrrrTr+#Z,,,,,,P#####################",
 "##,========,#######rr##########,,#######I##############",
-"##,,,,,9,,,,#......................#AAAA::AAA##########",
+"##,,,,,9,,,,#.!.+...........!......#AAAA::AAA##########",
 "##,,T,,,,T,,I.nnnnnnnnnnnnnnnnnnnn.#AQ:::::::##########",
-"##,,,,,,,,,,#Un..................n.#AQ:::::::##########",
-"##j,,,,,,,,P#.n................U.n.#OQ:::::::##########",
-"#####?,,,####.n.######oo###!:::#!n.#:::::::::#####I####",
-"##..!....!!?..n.##hEEooooo#::d:#.n.#Z:::::::P#cjrrrrrZ#",
-"NInnnnnnnnnnnnn.##EQoooooo#::::#.n.######::###crrrrrrr#",
-"##.......P..P.?P##SQooohoo#!:::#Un...........#rrr3rrrr#",
-"####::############oooooooo#::::#.nnnnnnnnnnnnrrrrrrrrrN",
-"##:::::###########ZooooooP#+:::#+............rrrrrrrrP#",
-"##:::::###########oooooooo#::::#.........+...#r+!r++rr#",
-"##E::::##HHHHH##I##########!:::#####..#I###############",
-"##EW:::##HHHHH#u..u.u.u..uI::::#kkk.....###############",
-"##E::::::::X::#c...........::::#kQ......###############",
+"##?,,,,,,,,?#Un..................n.#AQ::c+:::##########",
+"##j!,,,,,,!P#.n..................n.#OQ::::::+##########",
+"#####+,,?####.n.######oo###!::+#.nU#:::::::::#####I####",
+"##..P....+P?..n.##hEEooooo#::d:#.n.#Z:::::::P#cj+s!+rZ#",
+"NI?nnnnnnnnnnnnP##EQoooooo#::::#.n.######::###crrrrrrr#",
+"##.....?P?.!!?.+##SQooohoo#::::#.n...........#rrr3rrrr#",
+"####::############oooooooo#::::#.nnnnnnnnnnnnrrrrrrrr+N",
+"##:::::###########Zoo^+ooP#::::#.............rrrrrrrrP#",
+"##:::::###########oooooooo#::::#.......+!.+..#r!+r+crr#",
+"##E::::##HHHHH##I##########::::#####..#I###############",
+"##EW:::##HHHHH#u.Lu.u.u?.uI::::#kkk....?###############",
+"##E::::::::X::#c...........::::#kQ.....L###############",
 "##cc::c::::D::#............::::#JQ...h..###############",
-"###I###########u..u.u.u...#d:::#........###############",
+"###I###########u..u.u.uL..#d:::#.......P###############",
 "##Rrrrrcr##################::::#Y...T..P###############",
 "##Rrrrrrr##################::::#........###############",
-"##RQrrrrrr::+::::U::::::!::::::####,,##################",
-"##FQrrrrrrr::::::::::::::::::y:#,,,,,,,################",
-"##RQrrrrr#cc:d:yy::::d:::::::::#%,,,,,%################",
-"##Rrrrrrr#c::::::::::::::+:::::#%,,,,,%################",
-"##Rrrrrcr#######################,,,M,,,################",
+"##RQrrrrrr:::::::::::::::::::::####,,##################",
+"##FQrccrrrr::::::::::::::::::y:#,,,,,,,################",
+"##RQr+rrr#cc:d:yy::::d:::::::::#%,,,,,%################",
+"##Rrrrrrr#c:::::::U+::::::!:U::#%,,,,,%################",
+"##Rrrr+c+#######################,,,M,,,################",
 "################################s%%m%%c################",
 "#######################################################"
 ],
 "gallow": [
 "#############################B###########",
-"##cc::c::::D::I,,,,,b,,,,,I.Y....k#######",
+"##cc::c::::D::I,,,,,b,,,,,I.Y.L!?k#######",
 "##E::::::::X::#,========,,#......k#######",
-"##EW:::##HHHHH#,,,,,,8,G,,#..1....#######",
-"##E::::##HHHHH#,,T,,,,,,,,#.......#######",
-"#I:::::########,,,,,,,,,,P#......P#######",
+"##EW:::##HHHHH#,,,,,,8,G,,#P.1....#######",
+"##E::::##HHHHH#,,T,,,,,,,,#L......#######",
+"#I:::::########,,,,,,,,,,P#....?.P#######",
 "####::############,,,,######..###########",
 "##.............................##########",
 "##.............................##########",
 "##.............................##########",
 "##.............................##########",
 "######,,#######::#####::###....#####I####",
-"##RRR,,,,R#AAA:::A##::::::#....#u.u..u..#",
-"##RQ,,,,,,#AQ:::::##pp:ppp#....#........#",
-"##KQ,,,,,,#OQ:::::##pp:ppp#............c#",
-"#I,,,,,,,,I:::::::##::::::#.............#",
-"##,,,,,,,,#:::::::##::::::#....#........#",
-"##Z,,,,,,P#Z:::::P##P:f:::#....#u.u..u.L#",
+"##RRR,,,,R#AAA:::A##::::::#....#u.u?Lu..#",
+"##RQ,,,,,P#AQ:::::##pp:ppp#....#.......L#",
+"##KQ,c+,,,#OQ:c+::##pp:ppp#........T?..c#",
+"#I,,,,,,,cI:::::::##::::::#............+#",
+"##,,,,,,,+#::::::+##::::::#....#........#",
+"##Z,,,!,,P#Z:c:::P##P:f:::#....#u.u.Lu!L#",
 "##########################I....##########",
-"#################kkkk.....#....#c::+:::R#",
+"#################kkkk....P#....#c:++::+R#",
 "###########s,%%,#kQ.......#....#:::::::c#",
-"###########%,,,,#kQ.......#....#::::::::#",
-"###########%,,,,#JQ....h.......::::::::R#",
+"###########%,,,,#kQ.......#....#:::cc:::#",
+"###########%,,,,#JQ....h.......::::+:::R#",
 "###########mM,,,,..............::::::::c#",
-"###########%,,,,#Y....T..P#....#c::::+:R#",
+"###########%,,,,#Y....T.?P#....#c::cs!+R#",
 "###########%,,,,###########....##########",
 "###########c,%%,#hEEEooooo#....##########",
 "#################hEooooooo#....##########",
 "#################EQooooooo#....##########",
-"#################SQoooohooo....##########",
+"#################SQo^+ohooo....##########",
 "################Ioooooooooo....##########",
 "#################ZoooooooP#....##########",
 "#################ooooooooo#....##########",
@@ -8677,7 +8678,7 @@ const STATION_MAPS = {
 "############################oo###########",
 "######################oYoooooooooovo#####",
 "######################oooooohooooooo#####",
-"######################oooooooooooooo#####",
+"######################oooCCoooCCoooo#####",
 "######################oooooooooooooo#####",
 "######################zooCoCoCooCozo#####",
 "######################wwo#ww#www#www#####"
@@ -8871,9 +8872,12 @@ function enterStation(sys, fromSpace){
   if (!Sy.derelict){ const nG = sys==='meridian'||sys==='vesk' ? 2 : 1;
     for (let i=0;i<nG;i++){ const p = randomFloor(); if (p) ST.walkers.push({x:p[0], y:p[1], fx:p[0], fy:p[1], path:[], wait:rnd(0,2), kind:'guard', col:Sy.fac==='talon'?'#8a1f1f':Sy.fac==='concord'?'#2d4f8a':Sy.fac==='archive'?'#4a3a6a':'#5a5a3a',
       def:{n:Sy.fac==='talon'?'Talon enforcer':'Security guard', role:'Security', c:'#3a4a6a', gcol:Sy.fac==='talon'?'#8a1f1f':Sy.fac==='concord'?'#2d4f8a':Sy.fac==='archive'?'#4a3a6a':'#5a5a3a', start:()=>'a', N:{a:{t:()=>pick(['"Move along."','"Keep your hands where I can see them."','"Quiet shift. Let\'s keep it that way."','"Anything to report, pilot?"']), o:[['Nothing, officer.',null]]}}}}); } }
+  if (typeof sidePlace === 'function') try { sidePlace(sys); } catch (e) { console.warn(e); }   // people with a story to tell
+  if (typeof lifeSpawn === 'function') try { lifeSpawn(sys); } catch (e) { console.warn(e); }   // people in the rooms, and a little scene or two
   G.loc = sys; G.lastDock = sys; G.visited = G.visited || {}; G.visited[sys] = 1;
   if (fromSpace){
     missionsOnDock(sys);
+    if (typeof sideOnDock === 'function') sideOnDock(sys);
     if (sys==='vesk' && charmEff()<3 && G.credits>200 && Math.random()<0.3){ const lost=Math.min(2500, Math.round(G.credits*rnd(0.04,0.1))); G.credits-=lost; setTimeout(()=>toast('Someone bumps into you on the docking ramp. Your credit chit is '+fmt(lost)+' lighter. Vesk.','bad'),600); }
     if (G.stage==='s5_sable' && sys==='sable'){ setStage('s5_echo'); }
     if (!Sy.derelict) { const st=shipStats(); G.sp = st.sh; }
@@ -9075,6 +9079,7 @@ function errandArrive(w){
   const e = w.errand; if (!e) return; const n2 = Math.hypot(e.face[0], e.face[1]) || 1; w.mdx = e.face[0] / n2; w.mdy = e.face[1] / n2;
   if (e.k === 'bar'){ w.wait = rnd(7, 13); const bt = ST.npcs.filter(n => n.bar).sort((a, b) => Math.hypot(a.x - w.fx, a.y - w.fy) - Math.hypot(b.x - w.fx, b.y - w.fy))[0];
     if (Math.random() < 0.7) say({w}, pick(ERR_LINES.order), 0.4); if (bt && Math.random() < 0.7) say({x: bt.x, y: bt.y}, pick(ERR_LINES.pour), 2.2); w.mug = ST.t + w.wait + rnd(12, 30); }
+  else if (e.k === 'work'){ w.wait = rnd(8, 16); }
   else if (e.k === 'shop'){ w.wait = rnd(5, 10); if (Math.random() < 0.65){ say({w}, pick(ERR_LINES.ask), 0.4); if (e.n) say({x: e.n.x, y: e.n.y}, pick(ERR_LINES.sell), 2.2); } }
   else if (e.k === 'chat'){ const o = e.partner; if (!o || !ST.walkers.includes(o) || !o.errand || o.errand.partner !== w){ w.errand = null; return; }
     w.wait = rnd(7, 12); o.wait = w.wait; o.path = []; const dx = w.fx - o.fx, dy = w.fy - o.fy, d = Math.hypot(dx, dy) || 1; o.mdx = dx / d; o.mdy = dy / d;
@@ -9148,6 +9153,8 @@ function stationUpdate(dt){
     } else if ((w.wait-=dt) <= 0){
       if (w.errand && w.errand.partner && w.errand.partner.errand && w.errand.partner.errand.partner === w) w.errand.partner.errand = null;
       w.errand = null;
+      if (w.scene){ w.wait = 1; continue; }                                    // part of a little scene: stays put until it plays out
+      if (w.home != null && typeof residentMove === 'function'){ residentMove(w); continue; }   // people working in a room stay in it
       if (w.kind === 'patron' && !ST.dark && planErrand(w)){ w.wait = 1; continue; }
       const p = randomFloor(); if (p){ const path = bfs(Math.round(w.fx),Math.round(w.fy),(a,b)=>a===p[0]&&b===p[1],true); if (path && path.length<60) w.path = path; }
       w.wait = 1;
@@ -9158,6 +9165,7 @@ function stationUpdate(dt){
   heistTick(dt);
   if (ST.search && !UI.open){ ST.search.t += dt; if (ST.search.t >= ST.search.dur) finishSearch(); }
   chatterTick(dt);
+  if (typeof lifeTick === 'function') lifeTick(dt);
   for (const b of ST.bubbles) b.t -= dt;
   // ambient motes
   const th = ST.th;
@@ -12070,6 +12078,292 @@ function patron(fac){
   }};
 }
 
+// ===================== station life: people in the rooms doing things, and the odd little scene =====================
+// Each quiet room may have someone in it going about their work: a mechanic at the bench, someone off shift by the bunks,
+// a reader among the shelves. They stay in their room, move between the things they work on, mutter as you pass, and
+// you can talk to them. A scene or two plays out somewhere on the station each visit.
+
+const ROOM_JOB = [['u', 'quarters'], ['E', 'workshop'], ['V', 'foundry'], ['^', 'workshop'], ['z', 'plant'], ['k', 'library'], ['g', 'garden'], ['a', 'aquarium'],
+  ['C', 'control'], ['y', 'holding'], ['p', 'chapel'], ['f', 'chapel'], ['h', 'gallery'], ['c', 'storage'], ['+', 'storage'], ['s', 'storage'], ['d', 'storage'], ['?', 'lounge'], ['U', 'lounge']];
+const JOB = {
+  quarters: {role: 'Off shift', at: 'uL?T', lines: ["Can't sleep with that hum.", 'Shh. Night shift is sleeping.', 'Four hours till my shift. Four.', 'Somebody stole my good pillow.', 'Writing home. Nothing to say.', 'These bunks were built for children.'],
+    what: ['Trying to sleep. Failing.', 'Darning a sock. Glamorous, isn\'t it?', 'Reading the same letter for the tenth time.']},
+  workshop: {role: 'Mechanic', at: 'E^+', lines: ['Pass me the seven-eighths. No, the other one.', 'Who keeps borrowing my torque wrench?', 'That pump is held together by prayer.', 'Mind the sparks.', 'Rebuilt this valve three times this week.', 'If it rattles, hit it. If it still rattles, hit it harder.'],
+    what: ['Rebuilding a coolant pump. Third time this month.', 'Rewiring a lift motor someone "fixed" with gum.', 'Trying to find the leak. It\'s always the last place you look.'], spark: 1},
+  foundry: {role: 'Furnace hand', at: 'Vc+d', lines: ['Hot one today.', 'Stand back from the pour.', 'Lost my eyebrows in my first week.', 'Another ton for the Concord.', 'Keep your sleeves away from the press.'],
+    what: ['Watching the pour. If it goes wrong, it goes very wrong.', 'Skimming slag. Somebody has to.'], spark: 1},
+  plant: {role: 'Plant tech', at: 'z^', lines: ['Pressure\'s up again.', 'Don\'t touch the red lever.', 'If this machine stops, we all stop breathing.', 'Readings look fine. Too fine.'],
+    what: ['Keeping the air scrubbers alive.', 'Logging pressure readings. Riveting stuff.']},
+  library: {role: 'Reader', at: 'k', lines: ['Shh.', 'This bit is wrong, you know. Misfiled.', 'Page four thousand and something.', 'Fascinating. Truly.', 'Someone has written in the margins again.'],
+    what: ['Reading about the first Lanterns.', 'Copying out an old star chart.', 'Looking for a book that was never returned.']},
+  garden: {role: 'Grower', at: 'g', lines: ['Mind the seedlings.', 'They grow better if you talk to them.', 'Real tomatoes. Imagine.', 'Aphids. In space. How?', 'Water, light, patience.'],
+    what: ['Checking the roots. They\'re sulking.', 'Thinning out the beans.']},
+  aquarium: {role: 'Keeper', at: 'a', lines: ['Don\'t tap the glass.', 'That one bites.', 'Feeding time. Stand back.', 'The big one is called Admiral.'],
+    what: ['Feeding the fish. They\'re ungrateful.', 'Cleaning the glass. From the inside, later.']},
+  control: {role: 'Duty officer', at: 'C', lines: ['All quiet on the board.', 'Traffic\'s heavy tonight.', 'Don\'t touch that.', 'Another Guild hauler late. Typical.', 'If that light goes red, run.'],
+    what: ['Watching the docking boards.', 'Logging traffic through the Lantern.']},
+  holding: {role: 'Warden', at: 'y', lines: ['Nobody in the cells today. Shame.', 'Keep moving, pilot.', 'Last one in there cried all night.'],
+    what: ['Keeping an eye on the cells.', 'Filling in arrest forms. In triplicate.']},
+  chapel: {role: 'Worshipper', at: 'pf', lines: ['...light the lamps for the lost...', 'Quiet, please.', 'The Lanterns hear us. I\'m sure of it.', 'One candle for every crew that didn\'t come home.'],
+    what: ['Praying for my brother\'s crew. Overdue at Sable.', 'Lighting a candle. It helps. A bit.']},
+  gallery: {role: 'Visitor', at: 'hU', lines: ['Remarkable.', 'Have you seen this one?', 'They say it\'s older than the Concord.', 'I come here when it\'s quiet.'],
+    what: ['Just looking. It calms me.', 'Trying to understand the hologram. Failing.']},
+  storage: {role: 'Store hand', at: 'c+sd', lines: ['Crate count is off again.', 'Who signed for this?', 'If it\'s not on the manifest, it doesn\'t exist.', 'My back. My poor back.', 'Don\'t lean on that, it\'s fragile.'],
+    what: ['Counting crates. Then counting them again.', 'Looking for a pallet that "definitely came in".']},
+  lounge: {role: 'Resting', at: '?UT', lines: ['Five minutes. Just five minutes.', 'Best chair on the station, this.', 'Don\'t tell my supervisor.', 'Ahh. Peace.'],
+    what: ['Hiding from my supervisor.', 'Having a sit. Is that a crime now?']}
+};
+// a few lines in each station's own voice
+const LIFE_SYS = {
+  haldane: ['Foundry shift starts in ten.', 'Concord inspectors on deck four again.', 'My lungs are half rivet dust.'],
+  meridian: ['The Assembly sits tonight.', 'Mind the carpet, it costs more than your ship.', 'Commander Hale walked past earlier. Didn\'t smile.'],
+  ostra: ['Shh. The archivists are listening.', 'Fragment 77 is misfiled again.', 'Tea? It\'s always tea.'],
+  tolle: ['Grain convoy leaves at dawn.', 'Harvest\'s late this cycle.', 'Smell that? Bread.'],
+  brine: ['Wet floor. Always.', 'The tide pumps never stop.', 'Ice prices are up again.'],
+  cinder: ['Rock\'s been good this week.', 'Don\'t lick the ore.', 'Hard hat, hard head.'],
+  vesk: ['No names in the Hollow.', 'You didn\'t see me.', 'Thorne\'s in a mood.', 'Keep a hand on your wallet.'],
+  gallow: ['Did you hear that?', 'Lights flickered again.', 'Something sings down in the old shafts.']
+};
+function residentDef(job, sys){
+  const J = JOB[job], name = pick(PATRON_NAMES), lines = J.lines.concat(LIFE_SYS[sys] || []);
+  return {n: name, role: J.role, c: pick(PATRON_COLORS), lines, start: () => 'a', N: {
+    a: {t: () => '"' + pick(lines) + '"', o: [
+      ['What are you doing?', 'what'],
+      ['Heard anything?', 'gossip'],
+      ['How\'s life on ' + (SYSTEMS[sys].n || 'the station') + '?', 'life'],
+      ['I\'ll leave you to it.', null]]},
+    what: {t: () => '"' + pick(J.what) + '"', o: [['Anything else?', 'a'], ['Good luck with it.', null]]},
+    gossip: {t: () => { const c = contextChatter(); return '"' + (Math.random() < 0.45 ? tradeTip(sys) : Math.random() < 0.5 && c.length ? pick(c) : pick(RUMORS)) + '"'; }, o: [['Anything else?', 'a'], ['Thanks.', null]]},
+    life: {t: () => '"' + pick(['Could be worse. Could be Vesk.', 'Work, sleep, work. Same as anywhere.', 'Pay\'s fine. Air\'s terrible.', 'I\'m saving up to leave. Have been for nine years.', 'It\'s home. Don\'t tell anyone I said that.', 'Quiet. Too quiet, some nights.']) + '"', o: [['Anything else?', 'a'], ['Fair enough.', null]]}
+  }};
+}
+function lifeSpawn(sys){
+  if (!ST || SYSTEMS[sys].derelict || sys === 'sable') return;
+  const R = roomGrid(), tiles = {};
+  for (let y = 0; y < ST.h; y++) for (let x = 0; x < ST.w; x++){ const id = R.id[y * R.W + x]; if (id >= 0) (tiles[id] || (tiles[id] = [])).push([x, y]); }
+  const sr = srand(hashStr(sys + ':' + G.day));
+  for (const id in tiles){
+    const T = tiles[id], chars = new Set(T.map(([x, y]) => ST.map[y][x]));
+    if (T.length < 16 || T.filter(([x, y]) => isCorridor(x, y)).length > T.length / 2) continue;
+    if ([...'HKOSJFWM=ZYXD'].some(c => chars.has(c))) continue;                  // hangars, shops, bars, safes and desks: left as they are
+    if (ST.npcs.some(n => R.id[n.y * R.W + n.x] === +id)) continue;
+    const jr = ROOM_JOB.find(([c]) => chars.has(c)); if (!jr) continue;
+    if (sr() > 0.85) continue;
+    const job = jr[1], J = JOB[job], spots = residentSpots(T, J.at);
+    if (!spots.length) continue;
+    const n = T.length > 70 && sr() < 0.5 ? 2 : 1;
+    for (let k = 0; k < n && spots.length; k++){
+      const s = spots.splice(Math.floor(sr() * spots.length), 1)[0];
+      if (ST.walkers.some(w => Math.round(w.fx) === s[0] && Math.round(w.fy) === s[1])) continue;
+      const w = {x: s[0], y: s[1], fx: s[0], fy: s[1], path: [], wait: rnd(4, 12), kind: 'patron', home: +id, job, def: residentDef(job, sys), col: pick(PATRON_COLORS)};
+      w.mdx = s[2]; w.mdy = s[3]; ST.walkers.push(w);
+    }
+  }
+  lifeScenes(sys, sr);
+}
+// floor tiles next to the things this person works on, with the way to face
+function residentSpots(T, at){
+  const out = [];
+  for (const [x, y] of T){ if (!FLOORS.includes(ST.map[y][x]) || npcAt(x, y)) continue;
+    for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) if (at.includes(tileAt(x + dx, y + dy))){ out.push([x, y, dx, dy]); break; } }
+  return out;
+}
+// a resident stays in their room: now and then they move to another thing to work on, and mutter about it
+function residentMove(w){
+  w.errand = null;
+  const R = roomGrid(), T = []; for (let y = 0; y < ST.h; y++) for (let x = 0; x < ST.w; x++) if (R.id[y * R.W + x] === w.home) T.push([x, y]);
+  const spots = residentSpots(T, JOB[w.job].at).filter(([x, y]) => spotFree(x, y, w));
+  if (Math.random() < 0.6 && spots.length){
+    const s = pick(spots), path = bfs(Math.round(w.fx), Math.round(w.fy), (a, b) => a === s[0] && b === s[1], true);
+    if (path && path.length < 16){ w.path = path; w.errand = {k: 'work', face: [s[2], s[3]]}; if (!path.length) errandArrive(w); w.wait = 1; return; }
+  }
+  w.wait = rnd(8, 18);
+  if (Math.random() < 0.3 && Math.hypot(w.fx - ST.fx, w.fy - ST.fy) < 9) say({w}, pick(w.def.lines), 0.2);
+}
+
+// ---------- little scenes: a row, a papers check, someone asleep where they shouldn't be ----------
+const ROWS = [
+  [['You said Tuesday.', 'I said maybe Tuesday.', 'There\'s no "maybe" in a contract!', 'There is in mine.']],
+  [['That\'s my crate.', 'It\'s got my name on it.', 'You wrote that on this morning!', 'Prove it.']],
+  [['You owe me forty credits.', 'I owe you thirty.', 'Plus interest.', 'Since when do you charge interest?']],
+  [['Who ate my lunch?', 'Wasn\'t me.', 'You\'ve got sauce on your chin.', '...It was very good lunch.']],
+  [['Your shift. Not mine.', 'I swapped with Dax.', 'Dax is in the infirmary!', 'Then it\'s Dax\'s problem.']]
+];
+const PAPERS = [['Papers.', 'They\'re in my other coat.', 'Then go and get your other coat.', 'Fine. FINE.'],
+  ['Where are you headed?', 'The bar.', 'Purpose of visit?', 'The bar.'],
+  ['This permit expired last week.', 'It\'s a very good permit, though.', 'Move along. And renew it.']];
+function lifeScenes(sys, sr){
+  ST.scenes = [];
+  const free = () => { for (let i = 0; i < 40; i++){ const p = randomFloor(); if (p && isCorridor(p[0], p[1])) return p; } return randomFloor(); };   // scenes happen in the halls and corridors
+  const pair = (lines, kindB) => {
+    const p = free(); if (!p) return;
+    const q = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [p[0] + dx, p[1] + dy]).find(([x, y]) => spotFree(x, y)); if (!q) return;
+    const a = {x: p[0], y: p[1], fx: p[0], fy: p[1], path: [], wait: 999, kind: 'patron', scene: 1, def: patron(SYSTEMS[sys].fac), col: pick(PATRON_COLORS)};
+    const b = kindB === 'guard' ? {x: q[0], y: q[1], fx: q[0], fy: q[1], path: [], wait: 999, kind: 'guard', scene: 1, col: SYSTEMS[sys].fac === 'talon' ? '#8a1f1f' : '#2d4f8a',
+        def: {n: 'Security guard', role: 'Checking papers', c: '#3a4a6a', start: () => 'a', N: {a: {t: '"Not now, pilot. I\'m busy with this one."', o: [['Right.', null]]}}}}
+      : {x: q[0], y: q[1], fx: q[0], fy: q[1], path: [], wait: 999, kind: 'patron', scene: 1, def: patron(SYSTEMS[sys].fac), col: pick(PATRON_COLORS)};
+    a.mdx = q[0] - p[0]; a.mdy = q[1] - p[1]; b.mdx = -a.mdx; b.mdy = -a.mdy;
+    ST.walkers.push(a, b); ST.scenes.push({a, b, lines, i: 0, t: 6, kindB});
+  };
+  const k = sr();
+  if (k < 0.45) pair(pick(ROWS)[0]); else if (k < 0.8 && sys !== 'vesk') pair(pick(PAPERS), 'guard'); else pair(pick(ROWS)[0]);
+  if (sys === 'vesk' || sys === 'cinder' || sys === 'gallow' || sr() < 0.35){   // someone asleep on a bench, or on the floor
+    for (let i = 0; i < 40; i++){ const p = randomFloor(); if (!p) break; const wl = [[0, -1], [-1, 0], [1, 0], [0, 1]].find(([dx, dy]) => WALLS.includes(tileAt(p[0] + dx, p[1] + dy)));
+      if (!wl || !isCorridor(p[0], p[1])) continue; ST.npcs.push({x: p[0], y: p[1], id: 'vagrant', def: vagrantDef('drunk'), seated: true, floorSit: true, sleeper: 1, face: [-wl[0], -wl[1]]}); break; }
+  }
+}
+// scenes play when you come near: lines go back and forth, then the pair goes their separate ways
+function lifeTick(dt){
+  if (!ST || !ST.scenes) return;
+  for (const s of ST.scenes){
+    if (s.done) continue;
+    const near = Math.hypot(s.a.fx - ST.fx, s.a.fy - ST.fy) < 9;
+    if ((s.t -= dt) > 0 || !near) continue;
+    if (s.i < s.lines.length){ say({w: s.i % 2 ? s.b : s.a}, s.lines[s.i], 0); s.i++; s.t = 2.4; }
+    else { s.done = 1; s.a.wait = rnd(2, 5); s.b.wait = rnd(3, 6); delete s.a.scene; delete s.b.scene; }
+  }
+  // sleepers snore now and then
+  for (const n of ST.npcs) if (n.sleeper && (n.zT = (n.zT || rnd(3, 8)) - dt) <= 0){ n.zT = rnd(5, 9); if (Math.hypot(n.x - ST.fx, n.y - ST.fy) < 8) say({x: n.x, y: n.y}, pick(['Zzz…', 'Hnnrrk… zzz…', '…five more minutes…', 'Mmf. Not the Sable lane…']), 0); }
+}
+
+// ===================== side stories: people with something going on in their lives, over several visits =====================
+// Each story is a few steps. Steps use ordinary contracts (salvage, courier, survey, bounty) tagged with the story, so they
+// show on the contract list and markers like any other job. If you cancel one, the person gives it to you again.
+
+function sqHas(key){ return (G.missions || []).filter(m => m.sq === key); }
+function sqJob(key, next, m){
+  m.id = 'm' + (G.mid++); m.sq = key; m.sqNext = next; G.missions.push(m);
+  journal('Side story: ' + m.title); toast('Side story: ' + m.title, 'story'); return m;
+}
+function sqStage(key){ return G.flags['sq_' + key] || 0; }
+function sqSet(key, v){ G.flags['sq_' + key] = v; }
+// called when any contract finishes
+function sqDone(m){
+  if (!m.sq) return;
+  if (m.sq === 'noor'){ G.flags['noorTold_' + m.dest] = 1; G.flags.noorN = (G.flags.noorN || 0) + 1; if (G.flags.noorN >= 2) sqSet('noor', 4); }
+  else if (m.sqNext) sqSet(m.sq, m.sqNext);
+  const who = {ines: 'Ines Varga at Haldane', corin: 'Corin Vale at Meridian', juno: 'Juno Asaba at Tolle', noor: 'Sister Noor at Gallow'}[m.sq];
+  if (who && (m.sq !== 'noor' || G.flags.noorN >= 2)) setTimeout(() => toast('Go back and see ' + who, 'story'), 900);
+}
+const again = (key, make) => ['Give me the details again.', null, make, () => !sqHas(key).length];
+
+Object.assign(NPCS, {
+  // ---------------- HALDANE: Ines Varga, welder. Her brother went missing on an ore hauler. ----------------
+  ines: {n: 'Ines Varga', role: 'Foundry welder', c: '#e08a4a', start: () => ['a', 'wait1', 'rec', 'wait3', 'home', 'after'][sqStage('ines')] || 'after', N: {
+    a: {t: '"My brother Ivo crewed the Saltwind, a Guild ore hauler. She went dark off Cinder nine days ago. The Guild has written her off. I haven\'t." She doesn\'t look up from the weld. "Find the wreck. Bring me her recorder. Whatever\'s on it, I want to hear it."', o: [
+      ['I\'ll find the Saltwind.', null, () => { sqSet('ines', 1); inesJob1(); }],
+      ['What happened to the ship?', 'why'],
+      ['Not my business.', null]]},
+    why: {t: '"Pirates, the Guild says. Rocks, the insurers say. Ivo would say bad luck and a worse captain." A ghost of a smile. "He always said that."', o: [['I\'ll look for it.', null, () => { sqSet('ines', 1); inesJob1(); }], ['Sorry. Not now.', null]]},
+    wait1: {t: '"The Saltwind. Off Cinder. Please."', o: [again('ines', inesJob1), ['On my way.', null]]},
+    rec: {t: 'You play the recorder. Static, then a voice: "...red hulls, they\'re boarding... Talon... they want the crew alive, Ines, they want us ali—" It cuts out.\n\nInes sets down her torch very carefully. "Alive. They took him to Vesk. They take people to Vesk and sell them their own lives back."', o: [
+      ['I\'ll pay his ransom. (2,500 cr)', null, () => { if (G.credits < 2500){ toast('You need 2,500 credits', 'bad'); return 'rec'; } addCredits(-2500, 'Ransom for Ivo'); G.flags.inesWay = 'pay'; sqSet('ines', 3); inesJob2(); }],
+      ['I\'ll get him back the hard way.', null, () => { G.flags.inesWay = 'fight'; sqSet('ines', 3); inesJob2(); }],
+      ['Let me think about it.', null]]},
+    wait3: {t: () => G.flags.inesWay === 'pay' ? '"Take the money to Vesk. Don\'t let them haggle. They always haggle."' : '"Gash Vorn. That\'s the one who took the Saltwind. He hunts the lanes near Cinder. Make him regret it."', o: [again('ines', inesJob2), ['Going.', null]]},
+    home: {t: () => 'Ivo is sitting on a crate by the furnace, thinner, bruised, alive. Ines can\'t speak for a moment. Then: "' + (G.flags.inesWay === 'pay' ? 'You paid for him. I\'ll pay you back. Half now, the rest when the foundry stops skimming my wages, so... never. Sorry."' : 'They say Vorn\'s ship lit up the whole belt. The Talon let Ivo go the same day. Funny, that."'), o: [
+      ['Look after him.', null, () => { sqSet('ines', 5); if (G.flags.inesWay === 'pay'){ addCredits(1250, 'Ines repays you'); rep('concord', 5); } else { addCredits(1500, 'Ines\'s thanks'); rep('concord', 8); rep('talon', -5); } addXP(60); journal('Side story done: Ivo Varga is home.'); }]]},
+    after: {t: '"Ivo\'s back on shift. Don\'t tell him I cried. He\'d never let me forget it."', o: [['Your secret\'s safe.', null]]}
+  }},
+  // ---------------- MERIDIAN: Corin Vale, Assembly clerk, being blackmailed ----------------
+  corin: {n: 'Corin Vale', role: 'Assembly clerk', c: '#b8a0e0', start: () => ['a', 'wait1', 'more', 'wait3', 'end', 'after'][sqStage('corin')] || 'after', N: {
+    a: {t: '"You have an honest face. Unfortunate for you." He lowers his voice. "Someone has letters of mine. Indiscreet letters. They want a payment left at a drop in Brinewell. No questions, no names. I can\'t be seen going there."', o: [
+      ['I\'ll carry it.', null, () => { sqSet('corin', 1); corinJob('pay1'); }],
+      ['What\'s in the letters?', 'why'],
+      ['Find someone else.', null]]},
+    why: {t: '"Love letters. To someone the Assembly would not approve of." He straightens his cuffs. "That is all you need to know, and more than I should have said."', o: [['All right. I\'ll take it.', null, () => { sqSet('corin', 1); corinJob('pay1'); }], ['No.', null]]},
+    wait1: {t: '"Brinewell. The drop. Please don\'t open it."', o: [again('corin', () => corinJob('pay1')), ['Going.', null]]},
+    more: {t: '"They want more. Already." His hands shake. "It won\'t stop, will it? It never stops."', o: [
+      ['Pay them once more.', null, () => { G.flags.corinWay = 'pay'; sqSet('corin', 3); corinJob('pay2'); }],
+      ['Let me find out who it is.', null, () => { G.flags.corinWay = 'find'; sqSet('corin', 3); corinJob('find'); }],
+      ['Give me a moment.', null]]},
+    wait3: {t: () => G.flags.corinWay === 'pay' ? '"The same drop. The same silence."' : '"Watch the drops around Brinewell. Whoever collects, I want a name."', o: [again('corin', () => corinJob(G.flags.corinWay === 'pay' ? 'pay2' : 'find')), ['Going.', null]]},
+    end: {t: () => G.flags.corinWay === 'pay' ? '"Paid. Again. You\'ve kept me in office a little longer." He presses credits into your hand. "If you ever need a door opened in Meridian, knock on mine."' : '"Pettibone? A Guild clerk. I\'ve bought him lunch." He laughs, not happily. "What do I do with him?"', o: [
+      ['You\'re welcome.', null, () => { sqSet('corin', 5); addCredits(900, 'Corin\'s thanks'); rep('concord', 5); addXP(40); journal('Side story done: Corin Vale\'s secret is safe, for now.'); }, () => G.flags.corinWay === 'pay'],
+      ['Give his name to Commander Hale.', null, () => { sqSet('corin', 5); addCredits(1500, 'Corin\'s thanks'); rep('concord', 12); rep('guild', -3); addXP(60); journal('Side story done: Pettibone was arrested by Concord Intelligence.'); toast('Pettibone is arrested. Corin is safe.', 'good'); }, () => G.flags.corinWay === 'find'],
+      ['Deal with him quietly yourself.', null, () => { sqSet('corin', 5); addCredits(2200, 'Corin\'s thanks'); rep('concord', 4); addXP(60); journal('Side story done: Corin bought Pettibone\'s silence, and the letters.'); }, () => G.flags.corinWay === 'find']]},
+    after: {t: '"Ah, my discreet friend. Meridian is a little less frightening with you in it."', o: [['Take care, Corin.', null]]}
+  }},
+  // ---------------- TOLLE: Juno Asaba, grower who wants to fly ----------------
+  juno: {n: 'Juno Asaba', role: 'Grower', c: '#8acf6a', start: () => ['a', 'wait1', 'test', 'wait3', 'end', 'after'][sqStage('juno')] || 'after', N: {
+    a: {t: '"Everyone on Tolle wants to grow beans until they die. I want to fly." She wipes soil off her hands. "I\'ve built half a nav kit out of a tractor. Bring me four Electronics and I\'ll finish it."', o: [
+      ['I\'ll bring four Electronics.', null, () => { sqSet('juno', 1); journal('Side story: bring 4 Electronics to Juno Asaba (Tolle).'); toast('Side story: 4 Electronics for Juno', 'story'); }],
+      ['Why not just leave?', 'why'],
+      ['Beans are important.', null]]},
+    why: {t: '"Leave on what? My mum\'s tractor?" She laughs. "Nobody hires a farm girl with no flight hours. So I\'m making my own."', o: [['I\'ll help.', null, () => { sqSet('juno', 1); journal('Side story: bring 4 Electronics to Juno Asaba (Tolle).'); toast('Side story: 4 Electronics for Juno', 'story'); }], ['Good luck.', null]]},
+    wait1: {t: () => '"Four Electronics. You\'ve got ' + have('elec') + '. Cinder and Haldane make them."', o: [
+      ['Here you are.', 'test', () => { give('elec', -4); sqSet('juno', 2); }, () => have('elec') >= 4],
+      ['Back soon.', null]]},
+    test: {t: '"It works! It actually works!" The kit chirps and lights up. "Take me out with you? Three survey points round Tolle. I want to hear the Lantern hum with my own ears."', o: [
+      ['Climb aboard.', null, () => { sqSet('juno', 3); junoJob(); }],
+      ['Another time.', null]]},
+    wait3: {t: '"Three points round Tolle. I\'ve packed sandwiches."', o: [again('juno', junoJob), ['Let\'s go.', null]]},
+    end: {t: '"I could hear it. The Lantern. Like a choir humming under the floor." She is quiet for a while. "Meridian has a flight school. It costs more than this farm makes in a year."', o: [
+      ['I\'ll pay your fees. (1,500 cr)', null, () => { if (G.credits < 1500){ toast('You need 1,500 credits', 'bad'); return 'end'; } addCredits(-1500, 'Juno\'s flight school'); G.flags.junoPilot = 1; sqSet('juno', 5); rep('guild', 10); addXP(70); journal('Side story done: Juno Asaba is off to flight school in Meridian.'); }],
+      ['Tolle needs you more.', null, () => { sqSet('juno', 5); give('food', Math.min(6, cargoFree('food'))); rep('guild', 4); addXP(40); journal('Side story done: Juno stayed on Tolle.'); toast('Juno gives you some of the harvest', 'good'); }]]},
+    after: {t: () => G.flags.junoPilot ? '"I\'m packing! Meridian, here I come. I\'ll fly past and wave. You\'ll know it\'s me, I\'ll be the one hitting the Lantern."' : '"The beans are up. I still look at the sky, though."', o: [['Take care, Juno.', null]]}
+  }},
+  // ---------------- GALLOW: Sister Noor keeps candles for the crews lost at Sable ----------------
+  noor: {n: 'Sister Noor', role: 'Keeper of the lamps', c: '#d8c8a0', start: () => ['a', 'wait1', 'names', 'wait3', 'end', 'after'][sqStage('noor')] || 'after', N: {
+    a: {t: '"I light a candle for every crew lost to Sable. Forty-one candles. But I don\'t know their names." She trims a wick. "The relay keeps a crew log. If someone brave docked there and read it, I could say their names properly."', o: [
+      ['I\'ll go to Sable.', null, () => { sqSet('noor', 1); journal('Side story: dock at Sable Relay and read the crew log for Sister Noor (Gallow).'); toast('Side story: read the crew log at Sable', 'story'); }],
+      ['What happened at Sable?', 'why'],
+      ['Not today.', null]]},
+    why: {t: '"The relay went quiet. Then the lights went out. Then the crews who went to see why didn\'t come home." She lights another candle. "The Concord calls it an incident."', o: [['I\'ll go.', null, () => { sqSet('noor', 1); journal('Side story: dock at Sable Relay and read the crew log for Sister Noor (Gallow).'); toast('Side story: read the crew log at Sable', 'story'); }], ['Not today.', null]]},
+    wait1: {t: '"Sable Relay. Dock, find the log, come back. Please come back."', o: [['I will.', null]]},
+    names: {t: 'You read her the names from the roster. She repeats each one, slowly. When you finish, she is crying, and so, a little, is the miner in the back pew.\n\n"Some of them had families. Haldane. Brinewell. Would you carry word to them? They deserve to know."', o: [
+      ['I\'ll take word to both.', null, () => { sqSet('noor', 3); noorJobs(); }],
+      ['Another time.', null]]},
+    wait3: {t: () => '"Haldane and Brinewell. ' + (G.flags.noorN ? 'One family knows now. Thank you.' : 'Gently, please.') + '"', o: [['Give me the details again.', null, noorJobs, () => !sqHas('noor').length && (G.flags.noorN || 0) < 2], ['Going.', null]]},
+    end: {t: '"You\'ve done a kind thing, pilot." She presses something cold into your hand. "A miner left this at the shrine. It hums near the Lanterns. I think it should go with someone who travels."', o: [
+      ['Thank you, Sister.', null, () => { sqSet('noor', 5); give('relic', 1); rep('archive', 10); addXP(70); journal('Side story done: the lost crews of Sable have their names back.'); }]]},
+    after: {t: '"Forty-one candles. Forty-one names. Fly safely."', o: [['I will.', null]]}
+  }}
+});
+function inesJob1(){ sqJob('ines', 2, {type: 'salvage', dest: 'cinder', wreck: 'The Saltwind', reward: 500, title: 'Find the Saltwind\'s recorder off Cinder', desc: 'Ines Varga\'s brother crewed the Saltwind. Find the wreck in Cinder (it\'s on your nav when you arrive) and recover the recorder.', fac: 'guild', rep: 2}); }
+function inesJob2(){
+  if (G.flags.inesWay === 'pay') sqJob('ines', 4, {type: 'courier', dest: 'vesk', reward: 0, title: 'Take Ivo Varga\'s ransom to Vesk', desc: 'Deliver the ransom to the Talon at Vesk Hollow. They\'ll let Ivo go.', fac: 'talon', rep: 1});
+  else sqJob('ines', 4, {type: 'bounty', dest: 'cinder', tag: 'vorn' + G.day, name: 'Captain Gash Vorn', reward: 1200, title: 'Bounty: Captain Gash Vorn', desc: 'The Talon captain who took the Saltwind. He hunts the lanes near Cinder. Expect escorts.', fac: 'concord', rep: 4});
+}
+function corinJob(k){
+  if (k === 'find') sqJob('corin', 4, {type: 'survey', dest: 'brine', pts: [], reward: 400, title: 'Watch the blackmail drops round Brinewell', desc: 'Chart three points round Brinewell where the drops are left. Corin wants a name.', fac: 'concord', rep: 1});
+  else sqJob('corin', k === 'pay1' ? 2 : 4, {type: 'courier', dest: 'brine', reward: 300, title: 'A sealed payment for Corin Vale to Brinewell', desc: 'Leave Corin\'s payment at the drop in Brinewell. Don\'t open it.', fac: 'concord', rep: 1});
+}
+function junoJob(){ sqJob('juno', 4, {type: 'survey', dest: 'tolle', pts: [], reward: 300, title: 'Test flight with Juno: three survey points round Tolle', desc: 'Juno\'s home-made nav kit needs a test. Chart three points around Tolle.', fac: 'guild', rep: 1}); }
+function noorJobs(){
+  const got = sqHas('noor').map(m => m.dest);
+  for (const d of ['haldane', 'brine']) if (!got.includes(d) && !(G.flags['noorTold_' + d])) sqJob('noor', 0, {type: 'courier', dest: d, reward: 200, title: 'Word of the Sable crews to their families in ' + SYSTEMS[d].n, desc: 'Sister Noor\'s list of the lost. Take it gently to ' + SYSTEMS[d].st + '.', fac: 'archive', rep: 1, noorDest: d});
+}
+Object.assign(QUEST_MARK, {
+  ines: () => [0, 2, 4].includes(sqStage('ines')),
+  corin: () => [0, 2, 4].includes(sqStage('corin')),
+  juno: () => sqStage('juno') === 0 || sqStage('juno') === 4 || (sqStage('juno') === 1 && have('elec') >= 4) || sqStage('juno') === 2,
+  noor: () => [0, 2, 4].includes(sqStage('noor'))
+});
+// where each of them is found: a room with these things in it
+Object.assign(CH_NPC, {ines: 'f_work2', corin: 'm_officer', juno: 'f_farmer', noor: 'f_old'});
+for (const [k, sys, f] of [['ines', 'haldane', 1], ['corin', 'meridian', 0], ['juno', 'tolle', 1], ['noor', 'gallow', 1]])
+  NPC_LOOKS[k] = Object.assign(randomLook(NPCS[k].n, sys), f ? {hair: 'long', beard: null} : {hair: 'short', beard: null});   // their own looks, so the right 3D figure and portrait are used
+const SIDE_AT = {haldane: ['ines', 'V^Ec'], meridian: ['corin', 'hk?U'], tolle: ['juno', 'g'], gallow: ['noor', 'pf']};
+function sidePlace(sys){
+  const s = SIDE_AT[sys]; if (!s || ST.npcs.some(n => n.id === s[0])) return;
+  const R = roomGrid(), reachN = () => { let n = 0; const seen = new Set([ST.px + ',' + ST.py]), q = [[ST.px, ST.py]]; while (q.length){ const [x, y] = q.pop(); n++; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const k = (x + dx) + ',' + (y + dy); if (!seen.has(k) && walkable(x + dx, y + dy)){ seen.add(k); q.push([x + dx, y + dy]); } } } return n; };
+  const all = []; for (let y = 0; y < ST.h; y++) for (let x = 0; x < ST.w; x++) if (R.id[y * R.W + x] >= 0 && !isCorridor(x, y)) all.push([x, y]);
+  const ok = ([x, y]) => !ST.walkers.some(w => Math.round(w.fx) === x && Math.round(w.fy) === y) && !ST.npcs.some(n => Math.abs(n.x - x) + Math.abs(n.y - y) < 3);
+  let spots = []; for (const c of s[1]){ spots = residentSpots(all, c).filter(ok); if (spots.length) break; }   // the first kind of thing listed is where they'd rather be
+  const sr = srand(hashStr(sys + 'side')); const base = reachN();
+  while (spots.length){
+    const [x, y, dx, dy] = spots.splice(Math.floor(sr() * spots.length), 1)[0];
+    const n = {x, y, id: s[0], def: NPCS[s[0]], face: [dx, dy]}; ST.npcs.push(n);
+    if (reachN() === base - 1) return;          // nobody walled in
+    ST.npcs.pop();
+  }
+}
+// reading the crew log at Sable for Sister Noor
+function sideOnDock(sys){
+  if (sys === 'sable' && sqStage('noor') === 1){ sqSet('noor', 2); setTimeout(() => toast('You copy the crew roster from the relay\'s log for Sister Noor', 'story'), 1200); journal('Copied the Sable crew roster for Sister Noor.'); }
+}
+
 // ===================== drinking, blackouts & hangovers =====================
 function charmEff(){ const d = G.drunk||0; return G.skills.charm + (d>=2 && d<=4 ? 1 : 0); }
 function tipsyText(){
@@ -12319,7 +12613,7 @@ function watchers(){
     if (n.shop && 'KOSJF'.includes(n.shop)) check(nx, ny, 5.5, n.def.n, (n.alert?90:48));
     else check(nx, ny, n.bar?3.2:n.seated?2.6:3.4, n.def.n, n.bar?16:n.seated?11:18); }
   const gm = ST.intel && ST.intel.guards ? 0.5 : 1;
-  for (const w of ST.walkers){ if (w.kind==='guard') check(w.fx,w.fy,5.2,'Security guard',55*gm); else if (w.kind==='drone') check(w.fx,w.fy,2.6,'Cleaning drone',20); else check(w.fx,w.fy,3.4,w.def.n,18); }
+  for (const w of ST.walkers){ if (w.kind==='guard') check(w.fx,w.fy,5.2,'Security guard',55*gm); else if (w.kind==='drone') check(w.fx,w.fy,2.6,'Cleaning drone',20); else if (w.home != null) check(w.fx,w.fy,2.6,w.def.n,10); else check(w.fx,w.fy,3.4,w.def.n,18); }   // people busy at their work notice less
   return out;
 }
 function heistTick(dt){
