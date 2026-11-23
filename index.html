@@ -5351,6 +5351,7 @@ function abandonMission(m){
 function completeMission(m){
   G.missions = G.missions.filter(x=>x!==m); delete G.mcargo[m.id];
   addCredits(m.reward, m.title); if (m.fac) rep(m.fac, m.rep||3);
+  if (m.favour){ G.flags.thorneOwed = 0; toast('Favour done. Thorne will hide you again if you need it.','good'); }
   addXP(15 + Math.round(m.reward/120)); G.stats.missions++;
   journal('Completed: '+m.title); sfx('good');
 }
@@ -5610,7 +5611,7 @@ const NPCS = {
       ['We\'re on the same side, Ruska. [Talon 20+]','friend',null,()=>G.rep.talon>=20],
       ['I\'ll take it off the Gravemaw myself.','defy']]},
     job:{t:"\"There's a Concord courier, the Ledger, running sealed orders through Brine. Make it disappear and the seed is yours. Bonus: the Concord will hate you, and I find that charming.\"", o:[['Consider it done.',null,()=>{ G.flags.thorneJob=1; setStage('s3_seed'); }],['Let me think.','a']]},
-    jobwait:{t:"\"The Ledger. Brine. Boom. Then we talk.\"", o:[['Going.',null]]},
+    jobwait:{t:"\"The Ledger. Brine. Boom. Then we talk.\"", o:[['I need somewhere to lay low.','low',null,()=>heat()>0],['Going.',null]]},
     paid:{t:"\"The Ledger's gone? Lovely work. Here's your singing box. Careful, it bites.\"", o:[['Thanks.','offer',()=>{ giveSeed(); rep('talon',15); }]]},
     sold:{t:"Thorne snaps her fingers. A deckhand brings a battered cradle, warm to the touch. \"Pleasure doing business.\"", o:[['...','offer',()=>{ giveSeed(); rep('talon',8); }]]},
     friend:{t:"\"Ha! Maybe we are. Take it. But you owe me, and I always collect.\"", o:[['...','offer',()=>{ giveSeed(); G.flags.owesThorne=1; rep('talon',5); }]]},
@@ -5618,7 +5619,13 @@ const NPCS = {
     defy:{t:"Thorne laughs until she coughs. \"Try it. The Gravemaw has eaten Concord frigates. Get out of my Hollow before I change my mind.\"", o:[['...',null,()=>{ G.flags.defy=1; }]]},
     dog:{t:"\"Hale's dog. I can smell the Concord on you. Get out of my Hollow before I feed you to the Gravemaw.\"", o:[['...',null]]},
     endc:{t:"Thorne holds the seed up to the red light and it flickers, frightened. \"Well, well. The Lanterns are mine.\" Her smile is very wide.", o:[['It\'s yours. Pay me.',null,()=>{ G.flags.seed=0; triggerEnding('keep'); }]]},
-    idle:{t:()=> G.stage==='done' ? "\"Still alive? Good. The Reach is more fun with you in it.\"" : "\"You're either buying, selling, or bleeding. Which?\"", o:[['Just looking.',null]]}
+    idle:{t:()=> G.stage==='done' ? "\"Still alive? Good. The Reach is more fun with you in it.\"" : "\"You're either buying, selling, or bleeding. Which?\"", o:[['I need somewhere to lay low.','low',null,()=>heat()>0],['Just looking.',null]]},
+    low:{t:()=>{ const f = thorneFavour(); if (f){ const j = f.title.replace(/^Thorne.s favour: /, ''); return '"You still owe me, pilot. '+j.charAt(0).toUpperCase()+j.slice(1)+'. Do that, then we talk about hiding you again."'; }
+        if (G.flags.thorneOwed) return '"You dropped my job? Brave. Stupid, but brave. Here it is again, and this time you finish it."';
+        const n = Math.max(1, wantedStars()); return '"Wanted level '+n+'? Ha. I\'ve a hole in the Hollow nobody finds. '+n+' day'+(n>1?'s':'')+' in there and the Concord forgets your face. But then you do me a favour, and you don\'t get the hole again until you have." (Days pass while you hide, so contracts with deadlines may run out.)'; }, o:[
+      ['Deal. Hide me.',null,()=>layLow(),()=>!thorneFavour()&&!G.flags.thorneOwed],
+      ['Give me the job.',null,()=>{ thorneGiveFavour(); toast('Thorne\'s favour added to your contracts','good'); },()=>!thorneFavour()&&G.flags.thorneOwed],
+      ['Not now.',null]]}
   }},
   // ---------------- GALLOW ----------------
   bar_gallow: bartender('Ines', 'gallow', 'Gallow Point\'s bar has its lights turned low. "The miners like it dark now," says Ines. "Helps them hear."'),
@@ -6032,10 +6039,10 @@ function missionsEnter(sysId){
       const pos = spawnPos(2400,3200);
       const cap = spawnShip('captain', pos, 'hostile', {tag:m.tag, name:m.name}); cap.ai.mode='hunt';
       for (let i=0;i<rint(1,2);i++){ const e=spawnShip(SYSTEMS[sysId].danger>=3?'raider':'skiff', vadd(pos,[rnd(-150,150),rnd(-60,60),rnd(-150,150)]), 'hostile'); e.ai.mode='hunt'; }
-      msg('Bounty target '+m.name+' detected!','#ffaa44');
+      if (!S.target) S.target = cap; msg('Bounty target '+m.name+' detected! Marked BOUNTY on your screen.','#ffaa44');
     }
-    if (m.type==='raid' && m.dest===sysId){ spawnTraders(true); spawnTraders(true); }
-    if (m.type==='clear' && m.dest===sysId){ const k='pirate'; spawnEncounter(k,true); }
+    if (m.type==='raid' && m.dest===sysId){ spawnTraders(true); spawnTraders(true); msg('Raid contract: Guild ships here are marked RAID TARGET.','#ffaa44'); }
+    if (m.type==='clear' && m.dest===sysId){ const k='pirate'; spawnEncounter(k,true); msg('Clear contract: Red Talon ships here are marked TARGET.','#ff7a5a'); }
   }
 }
 
@@ -6760,7 +6767,7 @@ function jobSite(m){
   if (m.type === 'survey') for (let i = 0; i < 3; i++) if (!(m.pts || []).includes(i)) addSite({kind: 'survey', name: 'Survey point ' + (i + 1), tag: 'SURVEY', col: '#ffe46a', pos: fixedSpot(m.dest, 'sv' + m.id + i, 2600 + i * 900), mesh: exMeshes().survey, c: '#8a7a30', scale: 4, known: true, r: 350, job: m, idx: i, spin: 1});
   if (m.type === 'escort'){ const p = vmad(S.gate.pos, vnorm(vsub(S.station ? S.station.pos : [0, 0, 0], S.gate.pos)), 400);
     const e = spawnShip('hauler', p, 'ally', {tag: 'convoy', name: 'Convoy ' + m.ship, job: m}); e.ai.mode = 'travel'; e.ai.dest = S.station ? S.station.pos : S.gate.pos; lookAt(e, vsub(e.ai.dest, p));
-    S.convoy = e; S.convoyT = rnd(14, 24); msg('Escort contract: the ' + m.ship + ' is waiting for you at the Lantern.', '#5dff8f'); }
+    S.convoy = e; S.convoyT = rnd(14, 24); S.target = e; msg('Escort contract: the ' + m.ship + ' is the hauler marked ESCORT in green. Stay close and see it to the station.', '#5dff8f'); }
 }
 
 // ---------- every frame ----------
@@ -7852,6 +7859,18 @@ function sideColor(e){
 function fmtDist(d){ return d>=1000 ? (d/1000).toFixed(1)+'k' : Math.round(d)+''; }
 function panel(ctx,x,y,w,h){ ctx.fillStyle='rgba(4,14,24,0.62)'; ctx.strokeStyle='rgba(120,220,255,0.25)'; ctx.lineWidth=1; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x,y,w,h,8); else ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke(); }
 
+// ships that a contract is about: the convoy you escort, a bounty, raid or clear targets. They get a clear label and are always pointed to.
+function jobOf(e){
+  if (!e || e.dead || e.kind !== 'ship' || !G || !G.missions) return null;
+  if (S.convoy === e) return {l: 'ESCORT ' + (e.job && e.job.ship ? e.job.ship.toUpperCase() : ''), c: '#5dff8f', k: 'escort'};
+  for (const m of G.missions){
+    if (m.type === 'bounty' && e.tag && e.tag === m.tag) return {l: 'BOUNTY ' + (m.name || '').replace('Captain ', '').toUpperCase(), c: '#ffaa44', k: 'bounty'};
+    if (m.dest !== S.sys) continue;
+    if (m.type === 'raid' && e.fac === 'guild') return {l: 'RAID TARGET', c: '#ffaa44', k: 'raid'};
+    if (m.type === 'clear' && e.fac === 'talon') return {l: 'TARGET', c: '#ff7a5a', k: 'clear'};
+  }
+  return null;
+}
 function drawHUD(ctx, W, H, cam, F, cx, cy, proj){
   exploreOverlay(ctx, W, H);
   if (noirOn() && S){ // danger: heavy vignette, and the edges bleed red when the hull is failing
@@ -7887,9 +7906,22 @@ function drawHUD(ctx, W, H, cam, F, cx, cy, proj){
         txt(ctx, m.l+' '+fmtDist(d), x, y+20, m.c); continue; } }
     if (!m.faint) edgeArrow(ctx, W, H, cx, cy, c, m.c, m.l.slice(0,3)+' '+fmtDist(d), false);
   }
+  // contract ships: a bold bracket and a name label, and an arrow at the screen edge however far away they are
+  for (const e of S.ents){
+    const J = jobOf(e); if (!J) continue;
+    const c = toCam(cam, e.pos), d = vdist(P.pos, e.pos); let on = false;
+    if (c[2] > 2){ const [x, y] = proj(c); const R = Math.max(16, e.rad * F / c[2] * 1.15);
+      if (x > -R && x < W + R && y > -R && y < H + R){ on = true;
+        if (e !== S.target){ const pl = 0.75 + 0.25 * Math.sin(performance.now() / 260); ctx.strokeStyle = J.c; ctx.globalAlpha = pl; ctx.lineWidth = 2.5; const q = Math.min(10, R * 0.5); ctx.beginPath();
+          ctx.moveTo(x - R, y - R + q); ctx.lineTo(x - R, y - R); ctx.lineTo(x - R + q, y - R); ctx.moveTo(x + R - q, y - R); ctx.lineTo(x + R, y - R); ctx.lineTo(x + R, y - R + q);
+          ctx.moveTo(x - R, y + R - q); ctx.lineTo(x - R, y + R); ctx.lineTo(x - R + q, y + R); ctx.moveTo(x + R - q, y + R); ctx.lineTo(x + R, y + R); ctx.lineTo(x + R, y + R - q); ctx.stroke(); ctx.globalAlpha = 1; }
+        ctx.font = 'bold ' + fs + 'px ui-monospace, Menlo, Consolas, monospace'; txt(ctx, J.l + (e === S.target ? '' : ' ' + fmtDist(d)), x, y + R + 13, J.c); ctx.font = fs + 'px ui-monospace, Menlo, Consolas, monospace';
+        if (J.k === 'escort' && e.hp < e.maxHp){ const bw = Math.max(40, R * 1.6); ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - bw / 2, y + R + 23, bw, 5); ctx.fillStyle = e.hp < e.maxHp * 0.35 ? '#ff4a4a' : '#5dff8f'; ctx.fillRect(x - bw / 2, y + R + 23, bw * clamp(e.hp / e.maxHp, 0, 1), 5); } } }
+    if (!on && e !== S.target) edgeArrow(ctx, W, H, cx, cy, c, J.c, J.l.split(' ')[0].slice(0, 6) + ' ' + fmtDist(d), true);
+  }
   // every nearby ship gets a small coloured marker; hostiles off-screen get red arrows
   for (const e of S.ents){
-    if (e.dead || e.kind!=='ship' || e===S.target || e.static) continue;
+    if (e.dead || e.kind!=='ship' || e===S.target || e.static || jobOf(e)) continue;
     const d = vdist(P.pos,e.pos); if (d>3500) continue;
     const c = toCam(cam,e.pos), col = sideColor(e);
     if (c[2]>5){ const [x,y]=proj(c); const R=Math.max(10, e.rad*F/c[2]*1.0);
@@ -7931,7 +7963,7 @@ function drawHUD(ctx, W, H, cam, F, cx, cy, proj){
     ctx.fillText(nm, px+8, py+12);
     ctx.font=(fs-2)+'px ui-monospace, Menlo, monospace'; ctx.fillStyle='#a9c2d4';
     const sideL = t.kind==='ship' ? (t.side==='hostile'?'HOSTILE':t.side==='ally'?'ALLY':'NEUTRAL')+' · '+(FACTIONS[t.fac]?FACTIONS[t.fac].n:'') : t.kind==='can'?'CARGO':t.kind==='site'?(t.site&&t.site.known?t.site.tag:'UNIDENTIFIED'):'ASTEROID';
-    ctx.fillText(sideL+' · '+fmtDist(d), px+8, py+27);
+    { const J0 = jobOf(t); if (J0){ ctx.fillStyle = J0.c; ctx.fillText(J0.l.split(' ')[0]+' · '+fmtDist(d), px+8, py+27); } else ctx.fillText(sideL+' · '+fmtDist(d), px+8, py+27); }
     if (t.kind==='ship' && t.maxHp<9000){
       const bw = pw-16;
       ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(px+8,py+36,bw,12);
@@ -7954,14 +7986,15 @@ function drawHUD(ctx, W, H, cam, F, cx, cy, proj){
     const c = toCam({pos:P.pos,f:P.f,u:P.u,r:P.r}, e.pos);
     let px = c[0]/RR*rr, py = -c[2]/RR*rr; const l=Math.hypot(px,py);
     const big = e.kind==='station'||e.kind==='gate'||e.static;
-    if (l>rr){ if (!big && e!==S.target && e.side!=='hostile') continue; px*=rr/l; py*=rr/l; }
-    const col = e.kind==='station'?'#7fc8ff':e.kind==='gate'?'#ffd27a':e.kind==='beacon'?'#ff6a8a':sideColor(e);
+    const J = jobOf(e);
+    if (l>rr){ if (!big && e!==S.target && e.side!=='hostile' && !J) continue; px*=rr/l; py*=rr/l; }
+    const col = J ? J.c : e.kind==='station'?'#7fc8ff':e.kind==='gate'?'#ffd27a':e.kind==='beacon'?'#ff6a8a':sideColor(e);
     ctx.strokeStyle=col; ctx.fillStyle=col;
     const hy = clamp(-c[1]/RR*rr, -14, 14);
     ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(rx+px,ry+py); ctx.lineTo(rx+px,ry+py+hy); ctx.stroke();
-    const s = big?5:e===S.target?4.5:3.2;
+    const s = big?5:J?5:e===S.target?4.5:3.2;
     ctx.fillRect(rx+px-s/2, ry+py+hy-s/2, s, s);
-    if (e===S.target){ ctx.beginPath(); ctx.arc(rx+px,ry+py+hy,6,0,7); ctx.stroke(); }
+    if (e===S.target || J){ ctx.beginPath(); ctx.arc(rx+px,ry+py+hy,6,0,7); ctx.stroke(); }
   }
   // status panel
   const bx=10, by=10, bw = small?100:130, st = shipStats();
@@ -11986,12 +12019,38 @@ function soberTick(dt){
   if (G.drunkT > 45){ G.drunkT = 0; G.drunk = Math.max(0, G.drunk-1); if (!G.drunk) toast('You feel sober again.'); }
 }
 const WAKE_NAMES = ['Big Mistake','Don\'t Ask','Hangover Express','Last Orders','Bad Decision','Sir Floats-a-Lot','Oops','Captain Wobbles','Never Again','Lucky Seven'];
+// ---- laying low with Thorne: days pass in a Talon safehouse, the wanted level clears, and you owe her a favour ----
+function thorneFavour(){ return (G.missions || []).find(m => m.favour); }
+function thorneGiveFavour(){
+  const id = 'm' + (G.mid++), dests = reachable('vesk', 3), lawful = dests.filter(([s]) => !SYSTEMS[s].bm), [d, h] = pick(lawful.length ? lawful : dests) || ['brine', 1];
+  const guild = dests.filter(([s]) => SYSTEMS[s].fac === 'guild'), [gd] = pick(guild.length ? guild : dests) || ['tolle'];
+  const kinds = ['raid', 'courier']; if (cargoFree('stims') >= 4) kinds.push('smuggle', 'smuggle');
+  const k = pick(kinds); let m;
+  if (k === 'smuggle'){ const c = pick(['stims', 'arms']), q = rint(4, 6); m = {id, type: 'smuggle', dest: d, cid: c, qty: q, reward: 300, title: 'Thorne\'s favour: run ' + q + ' ' + CID[c].n + ' to ' + SYSTEMS[d].n, desc: 'Thorne\'s price for hiding you. The crates are loaded at departure. Concord patrols will scan you.', fac: 'talon', rep: 3}; G.mcargo[id] = {cid: c, qty: q}; }
+  else if (k === 'raid') m = {id, type: 'raid', dest: gd, n: 2, got: 0, reward: 300, title: 'Thorne\'s favour: hit two Guild haulers in ' + SYSTEMS[gd].n, desc: 'Thorne\'s price for hiding you. Destroy two Guild ships there. She likes them nervous.', fac: 'talon', rep: 3};
+  else m = {id, type: 'courier', dest: d, reward: 300, title: 'Thorne\'s favour: a sealed message to ' + SYSTEMS[d].n, desc: 'Thorne\'s price for hiding you. A sealed message for "a friend" at ' + SYSTEMS[d].st + '. Don\'t open it.', fac: 'talon', rep: 3};
+  m.favour = 1; G.missions.push(m); G.flags.thorneOwed = 1; journal('Owe Thorne a favour: ' + m.title); return m;
+}
+function layLow(){
+  if (UI.open) closePanel();
+  const n = Math.max(1, wantedStars()), fl = $('flash'); fl.classList.add('black', 'on'); UI.open = true;
+  setTimeout(() => { UI.open = false;
+    G.day += n; for (let i = 0; i < n; i++) driftAll(); G.heat = 0; G.drunk = 0; G.drunkT = 0;
+    if (G.hp != null){ const st = shipStats(); G.hp = st.hull; }
+    const m = thorneGiveFavour(); saveGame(true); setTimeout(() => { fl.classList.remove('on'); setTimeout(() => fl.classList.remove('black'), 900); }, 60);
+    openPanel(n + ' day' + (n > 1 ? 's' : '') + ' later', body => {
+      body.appendChild(para('You spend ' + n + ' day' + (n > 1 ? 's' : '') + ' in a damp Talon safehouse deep in the Hollow, eating tinned eel and listening to the pipes. Thorne\'s people patch your hull while you wait. When you come out, it is day ' + G.day + ' and nobody is looking for you any more.'));
+      body.appendChild(h('div', {class: 'note'}, 'Wanted level cleared. You owe Thorne a favour: ' + m.title.replace(/^Thorne.s favour: /, '') + '. She won\'t hide you again until it\'s done.'));
+      body.appendChild(h('div', {class: 'btnrow'}, h('button', {class: 'b', onclick: () => closePanel()}, 'Right.')));
+    }, {noClose: true});
+  }, 1600);
+}
 function blackout(){
   if (UI.open) closePanel();
   G.drunk = 0; G.drunkT = 0; G.hangover = 1;
   const fl = $('flash'); fl.classList.add('black','on');
   UI.open = true;
-  setTimeout(()=>{ UI.open=false; resolveBlackout(); setTimeout(()=>fl.classList.remove('on','black'), 60); }, 1400);
+  setTimeout(()=>{ UI.open=false; resolveBlackout(); setTimeout(()=>{ fl.classList.remove('on'); setTimeout(()=>fl.classList.remove('black'), 900); }, 60); }, 1400);
 }
 function resolveBlackout(){
   const here = G.loc, Sy = SYSTEMS[here];
