@@ -12262,7 +12262,7 @@ function answer(o){
     G.locks = G.locks||{}; G.locks[heistKey(hs.x,hs.y)] = G.day;
     if (ST.sys === 'sable') dreadAdd(25); else ST.sus = (ST.sus||0) + 30;
     hs.active=false; ST.heist=null; closePanel();
-    toast('Wrong. The lock seizes with a loud CLUNK. It\'s jammed until you leave the system. (The answer was: '+hs.q.a+')','bad');
+    toast('Wrong. The lock seizes with a loud CLUNK. It\'s jammed until you leave the system.','bad');
     const ws = watchers(); if (ws.length && ST.sus>=60) caught();
   }
 }
