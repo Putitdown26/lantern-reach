@@ -5219,6 +5219,7 @@ function trade(cid, n){ // n>0 buy, n<0 sell
     if (cargoFree(cid)<1) return toast('Hold is full','bad');
     G.credits -= p; give(cid,1); setDrift(sys,cid,sysDrift(sys,cid)+0.008);
     G.stats.trades++; G.cost = G.cost||{}; G.cost[cid] = p;
+    { const m = G.missions.find(x=>(x.type==='supply'||x.type==='fetch') && x.cid===cid && x.dest===sys); if (m && have(cid)===m.qty) toast('You have the '+m.qty+' '+CID[cid].n+' for your contract. Hand them over on the contracts board.','good'); }
   } else {
     if (have(cid)<1) return;
     const p = sellPrice(sys,cid);
@@ -13480,11 +13481,14 @@ function openJobs(){
     body.appendChild(h('h3',{},'Active ('+G.missions.length+'/5)'));
     if (!G.missions.length) body.appendChild(h('div',{class:'note'},'No active contracts.'));
     for (const m of G.missions) body.appendChild(missionItem(m, true));
-    body.appendChild(h('div',{class:'note'},'Boards refresh every time you jump. Delivery contracts complete when you dock at the destination.'));
+    body.appendChild(h('div',{class:'note'},'Boards refresh every time you jump. Delivery contracts complete when you dock at the destination. For supply runs, buy the goods yourself and hand them over here, on the destination\'s contracts board.'));
   });
 }
 function missionItem(m, canAbandon){
+  const goods = (m.type==='supply' || m.type==='fetch') && CID[m.cid], hv = goods ? have(m.cid) : 0, here = goods && MODE==='station' && G.loc===m.dest, ready = here && hv>=m.qty;
   return h('div',{class:'item'}, h('div',{}, h('b',{},m.title)), h('div',{class:'sub'}, 'Destination: '+SYSTEMS[m.dest].n+(m.n?' · progress '+m.got+'/'+m.n:'')+' · '+fmt(m.reward)+' cr'),
+    goods ? h('div',{class:'sub', style:'color:'+(hv>=m.qty?'#8fe8a8':'#e8c35a')}, 'In your hold: '+Math.min(hv,m.qty)+'/'+m.qty+' '+CID[m.cid].n+'. '+(ready ? 'Ready to hand over.' : hv>=m.qty ? 'Take them to '+SYSTEMS[m.dest].st+'.' : 'Buy them at any market'+(here?' (this one too)':'')+', then hand them over here at '+SYSTEMS[m.dest].st+'.')) : null,
+    ready ? h('div',{class:'btnrow'}, h('button',{class:'sm b', onclick:()=>{ give(m.cid,-m.qty); completeMission(m); UI.refresh(); }}, 'Hand over '+m.qty+' '+CID[m.cid].n)) : null,
     canAbandon ? h('div',{class:'btnrow'}, h('button',{class:'sm', onclick:ev=>{ const b = ev.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Tap again to cancel'+(m.fac?' (costs a little standing)':''); return; } abandonMission(m); toast('Contract cancelled: '+m.title, 'bad'); UI.refresh(); }}, 'Cancel contract')) : null);
 }
 
