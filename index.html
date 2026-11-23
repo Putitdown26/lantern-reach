@@ -10862,7 +10862,7 @@ function isoPointer(px, py){
 // ===================== station minimap (both views) =====================
 function minimapRect(W, H, top){
   const n = Math.max(ST.w, ST.h);
-  if (ST.mmBig){ const sz = Math.min(W * 0.92, (H - top) * 0.82); const cs = Math.max(3, Math.floor(sz / n)); const mw = cs * ST.w, mh = cs * ST.h; return {x: Math.round((W - mw) / 2), y: Math.round(top + ((H - top) - mh) / 2), w: mw, h: mh, cs}; }
+  if (ST.mmBig){ const land = W > H * 1.3, cs = Math.max(3, Math.floor(Math.min(W * (land ? 0.96 : 0.92) / ST.w, ((H - top) - (land ? 64 : (H - top) * 0.18)) / ST.h) * 4) / 4);   /* fill the screen; on a landscape phone the height is what limits it */ const mw = cs * ST.w, mh = cs * ST.h; return {x: Math.round((W - mw) / 2), y: Math.round(top + ((H - top) - mh) / 2), w: mw, h: mh, cs}; }
   const sz = clamp(W * 0.24, 84, 124); const cs = Math.max(2, Math.floor(sz / n)); const mw = cs * ST.w, mh = cs * ST.h; return {x: 14, y: top + 16, w: mw, h: mh, cs};   /* small, top left: it is mostly there to be tapped */   // kept well clear of phone browser toolbars
 }
 function minimapMarks(){
@@ -10942,7 +10942,7 @@ function drawMinimap(ctx, W, H, top){
     for (const m of marks){ const k = m.lab + Math.round(m.x / 4) + ',' + Math.round(m.y / 4); if (seenLab[k]) continue; seenLab[k] = 1; const lx = R.x + (m.x + 0.5) * cs, ly = R.y + m.y * cs - 1; ctx.fillStyle = 'rgba(0,0,0,0.75)'; const w = ctx.measureText(m.lab).width + 4; ctx.fillRect(lx - w / 2, ly - Math.max(9, cs) - 1, w, Math.max(9, cs) + 2); ctx.fillStyle = m.col; ctx.fillText(m.lab, lx, ly + 1); }
     for (const n of ST.npcs){ if (n.id === 'patron' || n.bar) continue; const q = QUEST_MARK[n.id] && QUEST_MARK[n.id](); if (!q) continue; const lx = R.x + (n.x + 0.5) * cs, ly = R.y + n.y * cs - 1; const lab = n.def.n.split(' ').slice(-1)[0]; const w = ctx.measureText(lab).width + 4; ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(lx - w / 2, ly - Math.max(9, cs) - 1, w, Math.max(9, cs) + 2); ctx.fillStyle = '#ffe46a'; ctx.fillText(lab, lx, ly + 1); }
     ctx.textBaseline = 'middle';
-    if (WN){ ctx.font = "bold 14px 'Barlow Condensed', sans-serif"; ctx.fillStyle = 'rgba(226,214,186,0.85)'; ctx.fillText(((ST.th.sign || '') + '').toUpperCase() + '  ·  TAP ANYWHERE ON THE PLAN TO WALK THERE', W / 2, R.y + R.h + 26); }
+    if (WN){ ctx.font = "bold 14px 'Barlow Condensed', sans-serif"; ctx.fillStyle = 'rgba(226,214,186,0.85)'; { let cap = ((ST.th.sign || '') + '').toUpperCase() + '  ·  TAP ANYWHERE ON THE PLAN TO WALK THERE'; if (ctx.measureText(cap).width > W - 16) cap = 'TAP ANYWHERE ON THE PLAN TO WALK THERE'; ctx.fillText(cap, W / 2, R.y + R.h + 26); } }
     else { ctx.font = (CM ? '' : 'bold ') + '13px ' + (CM ? 'Bangers, "Arial Black", sans-serif' : '"Exo 2", system-ui, sans-serif'); ctx.fillStyle = CM ? '#000' : '#cfe8ff';
     ctx.fillText((CM ? (ST.th.sign || '').toUpperCase() + ' · ' : '') + 'Tap anywhere on the map to walk there', W / 2, R.y + R.h + 14); }
   } else {
