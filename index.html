@@ -10906,8 +10906,8 @@ function isoPointer(px, py){
 // ===================== station minimap (both views) =====================
 function minimapRect(W, H, top){
   const n = Math.max(ST.w, ST.h);
-  if (ST.mmBig){ const land = W > H * 1.3, cs = Math.max(3, Math.floor(Math.min(W * (land ? 0.96 : 0.92) / ST.w, ((H - top) - (land ? 64 : (H - top) * 0.18)) / ST.h) * 4) / 4);   /* fill the screen; on a landscape phone the height is what limits it */ const mw = cs * ST.w, mh = cs * ST.h; return {x: Math.round((W - mw) / 2), y: Math.round(top + ((H - top) - mh) / 2), w: mw, h: mh, cs}; }
-  const sz = clamp(W * 0.24, 84, 124); const cs = Math.max(2, Math.floor(sz / n)); const mw = cs * ST.w, mh = cs * ST.h; return {x: 14, y: top + 16, w: mw, h: mh, cs};   /* small, top left: it is mostly there to be tapped */   // kept well clear of phone browser toolbars
+  if (ST.mmBig){ const land = W > H * 1.3, cs = Math.max(3, Math.floor(Math.min(W * (land ? 0.96 : 0.92) / ST.w, ((H - top) - (land ? 64 : (H - top) * 0.18)) / ST.h) * 4) / 4);   /* fill the screen; on a landscape phone the height is what limits it */ const mw = cs * ST.w, mh = cs * ST.h; return {x: Math.round((W - mw) / 2), y: Math.round(top + ((H - top) - mh) / 2 + 8), w: mw, h: mh, cs}; }
+  const sz = clamp(W * 0.24, 84, 124); const cs = Math.max(2, Math.floor(sz / n)); const mw = cs * ST.w, mh = cs * ST.h, ng = wornOn() && typeof newGfx === 'function' && newGfx() && ST.sys !== 'sable'; return {x: 14, y: top + (ng ? 28 : 16), w: mw, h: mh, cs};   /* small, top left: it is mostly there to be tapped */   // kept well clear of phone browser toolbars
 }
 function minimapMarks(){
   if (ST.mmT) return ST.mmT;
@@ -10927,7 +10927,21 @@ function drawMinimap(ctx, W, H, top){
   ST.mmR = null;
   if (!ST || ST.search || UI.open || (SETTINGS.minimap === false && !ST.mmBig)) { if (ST) ST.mmBig = false; return; }
   const R = minimapRect(W, H, top), cs = R.cs, CM = comicOn(), big = !!ST.mmBig; ST.mmR = R;
-  const WN = wornOn();
+  const NG = wornOn() && typeof newGfx === 'function' && newGfx() && ST.sys !== 'sable', WN = wornOn() && !NG;   // new graphics: a clean deck plan in the station's own colours (Sable keeps the old amber screen)
+  if (NG && (!ST.mmC || ST.mmC.cs !== cs || !ST.mmC.ng)){
+    const c = document.createElement('canvas'); c.width = R.w; c.height = R.h; const x = c.getContext('2d'), RG = roomGrid(), PL = STATION_PAL[ST.sys] || {wall: '#7a8494', floor: '#4a5868'};
+    const fl = (tx, ty) => { const ch = (ST.map[ty] || [])[tx]; return ch != null && !WALLS.includes(ch); }, mix = (h, k, a) => { const q = hexRGB(h); return 'rgb(' + q.map(v => Math.round(v * a + k * (1 - a))).join(',') + ')'; };
+    for (let ty = 0; ty < ST.h; ty++) for (let tx = 0; tx < ST.w; tx++){ const ch = ST.map[ty][tx]; if (WALLS.includes(ch)) continue;
+      const id = RG.id[ty * RG.W + tx], cor = isCorridor(tx, ty), v = id >= 0 ? ((id * 2654435761) >>> 0) % 5 : 2;
+      x.fillStyle = ch === '~' ? '#1e6a80' : cor ? '#262c35' : mix(PL.floor, 30, 0.55 + v * 0.06); x.fillRect(tx * cs, ty * cs, cs, cs); }
+    x.fillStyle = mix(PL.wall, 255, 0.75); const lw = Math.max(1, Math.round(cs * 0.3));
+    for (let ty = 0; ty < ST.h; ty++) for (let tx = 0; tx < ST.w; tx++){ if (!fl(tx, ty)) continue;
+      if (!fl(tx, ty - 1)) x.fillRect(tx * cs, ty * cs, cs, lw); if (!fl(tx, ty + 1)) x.fillRect(tx * cs, (ty + 1) * cs - lw, cs, lw);
+      if (!fl(tx - 1, ty)) x.fillRect(tx * cs, ty * cs, lw, cs); if (!fl(tx + 1, ty)) x.fillRect((tx + 1) * cs - lw, ty * cs, lw, cs); }
+    x.fillStyle = (typeof DOOR_COL !== 'undefined' && DOOR_COL[ST.sys]) || '#e0a000';
+    for (const d of ST.doors || []){ if (d.ax === 'x') x.fillRect(d.x0 * cs, (d.y + 0.35) * cs, (d.x1 - d.x0 + 1) * cs, Math.max(1.5, cs * 0.3)); else x.fillRect((d.x + 0.35) * cs, d.y0 * cs, Math.max(1.5, cs * 0.3), (d.y1 - d.y0 + 1) * cs); }
+    ST.mmC = {c, cs, ng: 1};
+  }
   if (WN && (!ST.mmC || ST.mmC.cs !== cs || ST.mmC.dark !== ST.dark || !ST.mmC.wn)){
     const c = document.createElement('canvas'); c.width = R.w; c.height = R.h; const x = c.getContext('2d'), fl = (tx, ty) => { const ch = (ST.map[ty] || [])[tx]; return ch != null && !WALLS.includes(ch); };
     for (let ty = 0; ty < ST.h; ty++) for (let tx = 0; tx < ST.w; tx++){ const ch = ST.map[ty][tx]; if (WALLS.includes(ch)) continue;
@@ -10939,7 +10953,7 @@ function drawMinimap(ctx, W, H, top){
       if (!fl(tx - 1, ty)) x.fillRect(tx * cs, ty * cs, lw, cs); if (!fl(tx + 1, ty)) x.fillRect((tx + 1) * cs - lw, ty * cs, lw, cs); }
     ST.mmC = {c, cs, dark: ST.dark, wn: 1};
   }
-  if (!WN && (!ST.mmC || ST.mmC.cs !== cs || ST.mmC.dark !== ST.dark || ST.mmC.wn)){
+  if (!WN && !NG && (!ST.mmC || ST.mmC.cs !== cs || ST.mmC.dark !== ST.dark || ST.mmC.wn || ST.mmC.ng)){
     const c = document.createElement('canvas'); c.width = R.w; c.height = R.h; const x = c.getContext('2d');
     for (let ty = 0; ty < ST.h; ty++) for (let tx = 0; tx < ST.w; tx++){ const ch = ST.map[ty][tx];
       if (WALLS.includes(ch)) continue;
@@ -10954,7 +10968,15 @@ function drawMinimap(ctx, W, H, top){
   ctx.save();
   if (big){ ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, 0, W, H); }
   const pad = big ? 8 : 4;
-  if (WN){ const b = big ? 12 : 9, fx = R.x - b, fy = R.y - b, fw = R.w + b * 2, fh = R.h + b * 2 + (big ? 0 : 10);
+  if (NG){ const b = big ? 14 : 7, hd = big ? 30 : 15, fx = R.x - b, fy = R.y - b - hd, fw = R.w + b * 2, fh = R.h + b * 2 + hd;
+    ctx.fillStyle = 'rgba(12,15,20,0.94)'; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(fx, fy, fw, fh, 7) : ctx.rect(fx, fy, fw, fh); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#c9a640'; ctx.fillRect(fx + 1, fy + hd - 2, fw - 2, big ? 2 : 1.5);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.font = 'bold ' + (big ? 17 : 10) + "px 'Barlow Condensed', sans-serif"; ctx.fillStyle = '#ece4d0';
+    const nm = (big ? ((ST.th && ST.th.sign) || SYSTEMS[ST.sys].st || '') : (SYSTEMS[ST.sys].n || '')).toUpperCase(); if (ctx.letterSpacing !== undefined) ctx.letterSpacing = big ? '2px' : '1px';
+    ctx.fillText(nm, fx + b, fy + hd / 2); ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(236,228,208,0.5)'; ctx.font = (big ? 13 : 8) + "px 'Barlow Condensed', sans-serif"; ctx.fillText(big ? 'DECK PLAN' : 'MAP', fx + fw - b, fy + hd / 2); if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
+    ctx.fillStyle = '#0a0c10'; ctx.fillRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4); ctx.drawImage(ST.mmC.c, R.x, R.y);
+  } else if (WN){ const b = big ? 12 : 9, fx = R.x - b, fy = R.y - b, fw = R.w + b * 2, fh = R.h + b * 2 + (big ? 0 : 10);
     const g = ctx.createLinearGradient(0, fy, 0, fy + fh); g.addColorStop(0, '#6a6358'); g.addColorStop(0.4, '#4a453d'); g.addColorStop(1, '#2c2924'); ctx.fillStyle = g;
     ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(fx, fy, fw, fh, 6) : ctx.rect(fx, fy, fw, fh); ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(fx + 6, fy + 1.5); ctx.lineTo(fx + fw - 6, fy + 1.5); ctx.stroke();
@@ -10971,22 +10993,26 @@ function drawMinimap(ctx, W, H, top){
   if (CM){ ctx.fillStyle = 'rgba(10,14,20,0.92)'; ctx.fillRect(R.x, R.y, R.w, R.h); }
   ctx.drawImage(ST.mmC.c, R.x, R.y);
   }
-  const T = ST.t, dot = (tx, ty, col, r) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(R.x + (tx + 0.5) * cs, R.y + (ty + 0.5) * cs, r, 0, 7); ctx.fill(); };
+  const T = ST.t, dot = (tx, ty, col, r) => { const X = R.x + (tx + 0.5) * cs, Y = R.y + (ty + 0.5) * cs; if (NG && col !== '#000'){ ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.beginPath(); ctx.arc(X, Y, r + 1.2, 0, 7); ctx.fill(); } ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X, Y, r, 0, 7); ctx.fill(); };
   const marks = minimapMarks(); const seenLab = {};
   for (const m of marks){ if (m.small && !big) continue; dot(m.x, m.y, m.col, Math.max(1.6, cs * (big ? 0.55 : 0.75))); }
   for (const n of ST.npcs){ const q = QUEST_MARK[n.id] && QUEST_MARK[n.id](); if (q) dot(n.x, n.y, Math.sin(T * 5) > 0 ? '#ffe46a' : '#a08020', Math.max(2.2, cs * 0.9)); else if (big && n.id !== 'patron') dot(n.x, n.y, '#e6eef3', cs * 0.4); }
   if (big || (ST.intel && ST.intel.guards)) for (const w of ST.walkers) if (w.kind === 'guard') dot(w.fx, w.fy, '#ff6a5a', Math.max(2, cs * (big ? 0.45 : 0.8)));
-  if (WN){ const px = R.x + (ST.fx + 0.5) * cs, py = R.y + (ST.fy + 0.5) * cs, ph = (T * 0.9) % 1; ctx.strokeStyle = 'rgba(255,236,190,' + (1 - ph) * 0.8 + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, 2 + ph * cs * 4, 0, 7); ctx.stroke();
+  if (NG){ const px = R.x + (ST.fx + 0.5) * cs, py = R.y + (ST.fy + 0.5) * cs, ph = (T * 0.9) % 1, dc = hexRGB((typeof DOOR_COL !== 'undefined' && DOOR_COL[ST.sys]) || '#e0a000');
+    ctx.strokeStyle = 'rgba(' + dc.join(',') + ',' + (1 - ph) * 0.9 + ')'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(px, py, 2 + ph * cs * 4, 0, 7); ctx.stroke();
+    dot(ST.fx, ST.fy, '#000', Math.max(3.4, cs * 1.0)); dot(ST.fx, ST.fy, '#ffffff', Math.max(2.4, cs * 0.72)); }
+  else if (WN){ const px = R.x + (ST.fx + 0.5) * cs, py = R.y + (ST.fy + 0.5) * cs, ph = (T * 0.9) % 1; ctx.strokeStyle = 'rgba(255,236,190,' + (1 - ph) * 0.8 + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, 2 + ph * cs * 4, 0, 7); ctx.stroke();
     dot(ST.fx, ST.fy, '#000', Math.max(3, cs * 0.95)); dot(ST.fx, ST.fy, '#fff2d0', Math.max(2.2, cs * 0.7));
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let yy = R.y; yy < R.y + R.h; yy += 3) ctx.fillRect(R.x, yy, R.w, 1);
     const sh = ctx.createLinearGradient(R.x, R.y, R.x + R.w * 0.5, R.y + R.h); sh.addColorStop(0, 'rgba(255,255,255,0.07)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); ctx.fillStyle = sh; ctx.fillRect(R.x, R.y, R.w, R.h); }
   else { dot(ST.fx, ST.fy, '#000', Math.max(3, cs * 0.95)); dot(ST.fx, ST.fy, Math.sin(T * 6) > -0.3 ? '#3fe0ff' : '#ffffff', Math.max(2.2, cs * 0.7)); }
   if (big){
-    ctx.font = 'bold ' + Math.max(9, Math.round(cs * 0.95)) + 'px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.font = NG ? 'bold ' + Math.max(11, Math.round(cs * 1.15)) + "px 'Barlow Condensed', sans-serif" : 'bold ' + Math.max(9, Math.round(cs * 0.95)) + 'px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     for (const m of marks){ const k = m.lab + Math.round(m.x / 4) + ',' + Math.round(m.y / 4); if (seenLab[k]) continue; seenLab[k] = 1; const lx = R.x + (m.x + 0.5) * cs, ly = R.y + m.y * cs - 1; ctx.fillStyle = 'rgba(0,0,0,0.75)'; const w = ctx.measureText(m.lab).width + 4; ctx.fillRect(lx - w / 2, ly - Math.max(9, cs) - 1, w, Math.max(9, cs) + 2); ctx.fillStyle = m.col; ctx.fillText(m.lab, lx, ly + 1); }
     for (const n of ST.npcs){ if (n.id === 'patron' || n.bar) continue; const q = QUEST_MARK[n.id] && QUEST_MARK[n.id](); if (!q) continue; const lx = R.x + (n.x + 0.5) * cs, ly = R.y + n.y * cs - 1; const lab = n.def.n.split(' ').slice(-1)[0]; const w = ctx.measureText(lab).width + 4; ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(lx - w / 2, ly - Math.max(9, cs) - 1, w, Math.max(9, cs) + 2); ctx.fillStyle = '#ffe46a'; ctx.fillText(lab, lx, ly + 1); }
     ctx.textBaseline = 'middle';
-    if (WN){ ctx.font = "bold 14px 'Barlow Condensed', sans-serif"; ctx.fillStyle = 'rgba(226,214,186,0.85)'; { let cap = ((ST.th.sign || '') + '').toUpperCase() + '  ·  TAP ANYWHERE ON THE PLAN TO WALK THERE'; if (ctx.measureText(cap).width > W - 16) cap = 'TAP ANYWHERE ON THE PLAN TO WALK THERE'; ctx.fillText(cap, W / 2, R.y + R.h + 26); } }
+    if (NG){ ctx.font = "15px 'Barlow Condensed', sans-serif"; ctx.fillStyle = 'rgba(236,228,208,0.75)'; ctx.fillText('Tap anywhere on the plan to walk there', W / 2, Math.min(R.y + R.h + 28, H - 9)); }
+    else if (WN){ ctx.font = "bold 14px 'Barlow Condensed', sans-serif"; ctx.fillStyle = 'rgba(226,214,186,0.85)'; { let cap = ((ST.th.sign || '') + '').toUpperCase() + '  ·  TAP ANYWHERE ON THE PLAN TO WALK THERE'; if (ctx.measureText(cap).width > W - 16) cap = 'TAP ANYWHERE ON THE PLAN TO WALK THERE'; ctx.fillText(cap, W / 2, R.y + R.h + 26); } }
     else { ctx.font = (CM ? '' : 'bold ') + '13px ' + (CM ? 'Bangers, "Arial Black", sans-serif' : '"Exo 2", system-ui, sans-serif'); ctx.fillStyle = CM ? '#000' : '#cfe8ff';
     ctx.fillText((CM ? (ST.th.sign || '').toUpperCase() + ' · ' : '') + 'Tap anywhere on the map to walk there', W / 2, R.y + R.h + 14); }
   } else {
