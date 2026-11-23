@@ -5387,6 +5387,7 @@ function migrate(){
   if (!G.flags.mslGift){ G.flags.mslGift=1; G.upg.rack=Math.max(G.upg.rack||0,2); G.missiles=Math.max(G.missiles||0,8); }
   if (typeof G.flags.hunted==='string') G.flags.hunted=null;
   if (!G.tips && G.day > 4){ G.tips = {}; for (const k of ['walk','job1','K','O','S','J','W','m','bar']) G.tips[k] = 1; }   // veterans skip the basics
+  if (G.flags.thorneOwed && !G.flags.lowFix && heat() === 0){ G.flags.lowFix = 1; G.rep.concord = Math.max(G.rep.concord, -10); }   // laid low before the record was wiped with it
   if (!G.flags.holdV2){ G.flags.holdV2=1; if (G.upg.hold) G.upg.hold = 3; }
 }
 function huntedHere(sys){ const h=G.flags.hunted; return !!(h && h.sys===sys && h.day===G.day); }
@@ -6034,6 +6035,7 @@ function spawnTraders(initial){
   }
 }
 function missionsEnter(sysId){
+  if (G.rep.concord <= -30 && LAWFUL[sysId] !== undefined) msg('The Concord hates you (standing ' + G.rep.concord + '). Their ships here will attack on sight.', '#ff6a5a');
   for (const m of G.missions){
     if (m.type==='bounty' && m.dest===sysId){
       const pos = spawnPos(2400,3200);
@@ -12035,7 +12037,7 @@ function layLow(){
   if (UI.open) closePanel();
   const n = Math.max(1, wantedStars()), fl = $('flash'); fl.classList.add('black', 'on'); UI.open = true;
   setTimeout(() => { UI.open = false;
-    G.day += n; for (let i = 0; i < n; i++) driftAll(); G.heat = 0; G.drunk = 0; G.drunkT = 0;
+    G.day += n; for (let i = 0; i < n; i++) driftAll(); G.heat = 0; G.rep.concord = Math.max(G.rep.concord, -10);   // the record is gone, as when you pay the fine G.drunk = 0; G.drunkT = 0;
     if (G.hp != null){ const st = shipStats(); G.hp = st.hull; }
     const m = thorneGiveFavour(); saveGame(true); setTimeout(() => { fl.classList.remove('on'); setTimeout(() => fl.classList.remove('black'), 900); }, 60);
     openPanel(n + ' day' + (n > 1 ? 's' : '') + ' later', body => {
