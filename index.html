@@ -6364,10 +6364,21 @@ function aiUpdate(e, dt){
 }
 
 // ---------- hails ----------
+// what a customs scan would find, what it is worth, and the odds, so you can choose
+function customsNote(){
+  const L = []; let v = 0;
+  for (const k in G.cargo){ const c = CID[k]; if (!c || !(c.ill || c.hot) || !(G.cargo[k] > 0)) continue; const w = c.p * G.cargo[k]; v += w; L.push(G.cargo[k] + ' ' + c.n + (c.hot ? ' (stolen)' : '') + ', worth about ' + fmt(w) + ' cr'); }
+  for (const id in G.mcargo){ const mc = G.mcargo[id], c = CID[mc.cid]; if (!c || !c.ill) continue; const m = G.missions.find(x => x.id === id); L.push(mc.qty + ' ' + c.n + ' for a contract' + (m ? ' (' + m.title.replace(/^Thorne.s favour: /, 'Thorne\'s favour: ') + ')' : '') + '. Lose these and the contract fails'); }
+  if (!L.length) return 'Your hold is clean.';
+  const ch = Math.round(scanFindChance() * 100);
+  return 'ILLEGAL ON BOARD:\n• ' + L.join('\n• ') + (v ? '\nTotal value: about ' + fmt(v) + ' cr.' : '') +
+    '\n\nIf you comply: ' + ch + '% chance they find it. Found means it is all confiscated, a 500 cr fine and Concord standing −5 (yours is ' + G.rep.concord + '; at −30 the Concord attacks on sight).' +
+    '\nJettison first: you lose the goods, 30% chance they see you dump it (200 cr fine). Bribe: about ' + Math.round(Math.min(0.95, 0.55 + charmEff() * 0.1) * 100) + '% chance it works. Running: wanted level and Concord standing −6.';
+}
 function scanDialog(cutter){
   const bribe = Math.round(450*(1-charmEff()*0.12));
   return {n:'Concord Patrol', role:'Cutter', c:'#6aa8ff', start:()=>'a', N:{
-    a:{t:'"Concord patrol. Hold your course and drop shields for a cargo scan, pilot."', o:[
+    a:{t:()=>'"Concord patrol. Hold your course and drop shields for a cargo scan, pilot."\n\n'+customsNote(), o:[
       ['Comply with the scan.','scan',()=>{ const caught = Math.random() < scanFindChance(); return caught ? 'caught' : 'clean'; }],
       ['Quietly jettison the illegal cargo first.',null,()=>{ const ks = Object.keys(G.cargo).filter(k=>CID[k]&&(CID[k].ill||CID[k].hot)&&G.cargo[k]>0); jettison(ks, true);
         return Math.random()<0.3 ? 'spotted' : 'dumped'; }],
@@ -6407,7 +6418,7 @@ function hailTarget(){
       nothing:{t:'"Empty hold? Then we\'ll take the ship."', o:[['...',null]]}};
   } else if (t.side==='hostile'){
     N = {a:{t: fac==='concord' ? '"Power down and prepare to be boarded!"' : '"No more talking."', o:[
-      ['Surrender and pay fine (1,500 cr) [Concord]',null,()=>{ if (G.credits<1500){ toast('Not enough credits','bad'); return 'a'; } addCredits(-1500,'Concord fine'); G.rep.concord=Math.max(G.rep.concord,-10); for (const o of S.ents) if (o.fac==='concord'&&o.side==='hostile'){o.side='neutral';o.ai.mode='patrol';} }, ()=>fac==='concord'&&!C.boss],
+      ['Surrender and pay fine (1,500 cr) [Concord]',null,()=>{ if (G.credits<1500){ toast('Not enough credits','bad'); return 'a'; } addCredits(-1500,'Concord fine'); G.rep.concord=Math.max(G.rep.concord,-10); G.heat=0; msg('Fine paid. Your record is clear.','#9fe8ff'); for (const o of S.ents) if (o.fac==='concord'&&o.side==='hostile'){o.side='neutral';o.ai.mode='patrol';} }, ()=>fac==='concord'&&!C.boss],
       ['...',null]]}};
   } else if ((fac==='guild' || fac==='archive') && t.side==='neutral'){
     // a peaceful ship: talk, or turn pirate and shake it down
